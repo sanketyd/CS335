@@ -1,2 +1,3 @@
 nasm -f elf64 $1
-ld -s -o a.out $1.o
+filename=$(echo $1 | sed 's/.asm/.o/g')
+ld -s -o a.out $filename
