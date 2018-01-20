@@ -64,14 +64,11 @@ class Lexer(object):
                 'RETURN'          : 'return',
                 'STATIC'          : 'static',
                 'SUPER'           : 'super',
-                'SYNCHRONIZED'    : 'synchronized',
                 'SWITCH'          : 'switch',
                 'THIS'            : 'this',
                 'THROW'           : 'throw',
                 'THROWS'          : 'throws',
-                'TRANSIENT'       : 'transient',
                 'TRY'             : 'try',
-                'VOLATILE'        : 'volatile',
                 'WHILE'           : 'while'
                 }
         self.num_keywords = len(keywords)
