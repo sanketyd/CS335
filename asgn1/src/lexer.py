@@ -158,8 +158,8 @@ def main():
         t.value = int(t.value)
         return t
 
-    t_STR_CONSTANT = r'\".*?\"'
-    t_CHAR_CONSTANT = r'\".?\"'
+    t_STR_CONSTANT = r'\"((?!\").)*\"' #TODO: Modify to capture \"
+    t_CHAR_CONSTANT = r"\'((?!\').)\'"
 
     def t_IDENTIFIER(t):
         r'[a-zA-Z_][a-zA-Z_0-9]*'
