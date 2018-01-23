@@ -216,9 +216,10 @@ def main():
     #########################################################################################
 
     code = open(sys.argv[1],"r").read()
-    print(code)
+    # print(code)
     lexer = lex.lex()
     lexer.input(code)
+
     tokenDict = dict()
     for token in tokens:
         tokenDict[token] = [0,[]]
@@ -229,12 +230,14 @@ def main():
         tokenDict[tok.type][0] += 1
         if tok.value not in tokenDict[tok.type][1]:
             tokenDict[tok.type][1].append(str(tok.value))
+
     # print(tokenDict)
-    print("Token\t\t\tOccurences\t\tLexemes" )
+    print("Token" + 20 * " " + "Occurences" + 16 * " " + "Lexemes" )
     print("-----------------------------------------------------------------------")
     for key in tokenDict:
         if(tokenDict[key][0]!=0):
-            print(key + " " * (25 - len(key)) + str(tokenDict[key][0]) + "\t\t\t" + ",".join(tokenDict[key][1]))
+            print(key + " " * (25 - len(key)) + str(tokenDict[key][0]) + " " * (26 - len(str(tokenDict[key][0]))) + ",".join(tokenDict[key][1]))
+
 
 if __name__ == '__main__':
     main()
