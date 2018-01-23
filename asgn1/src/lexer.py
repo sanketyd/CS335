@@ -219,7 +219,7 @@ def main():
     print(code)
     lexer = lex.lex()
     lexer.input(code)
-    tokenDict = {}
+    tokenDict = dict()
     for token in tokens:
         tokenDict[token] = [0,[]]
     while True:
@@ -229,14 +229,12 @@ def main():
         tokenDict[tok.type][0] += 1
         if tok.value not in tokenDict[tok.type][1]:
             tokenDict[tok.type][1].append(str(tok.value))
-    #print(tokenDict)
-    #print(lexer.lineno)
-    #print(tokenDict)
-    print("Token\t\t\tOccurences\t\t\tLexemes" )
+    # print(tokenDict)
+    print("Token\t\t\tOccurences\t\tLexemes" )
     print("-----------------------------------------------------------------------")
     for key in tokenDict:
         if(tokenDict[key][0]!=0):
-            print(key + "\t\t\t" + str(tokenDict[key][0]) + "\t\t\t" + ",".join(tokenDict[key][1]))
+            print(key + " " * (25 - len(key)) + str(tokenDict[key][0]) + "\t\t\t" + ",".join(tokenDict[key][1]))
 
 if __name__ == '__main__':
     main()
