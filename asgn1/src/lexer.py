@@ -86,7 +86,8 @@ class Tokens(object):
                 'BITWISE_XOR',
                 'MODULO',
                 'INCREMENT',
-                'DECREMENT'
+                'DECREMENT',
+                'DOT'
                 ]
         return operators
 
@@ -95,7 +96,6 @@ class Tokens(object):
         separators = [
                 'STMT_TERMINATOR',
                 'COMMA',
-                'DOT',
                 'L_PAREN',
                 'R_PAREN',
                 'BLOCK_OPENER',
@@ -113,7 +113,8 @@ class Tokens(object):
                 'FLOAT_CONSTANT',
                 'CHAR_CONSTANT',
                 'STR_CONSTANT',
-                'COMMENT',
+                'INLINE_COMMENT',
+                'BLOCK_COMMENT',
                 'NULL'
                ]
         return misc
@@ -140,10 +141,30 @@ def main():
     tokens = toks._get_tokens()
 
     ################################ Rules for Tokens #######################################
+    # Other Identifiers
+    def t_FLOAT_CONSTANT(t):
+        r'\d+\.\d+'
+        t.value = float(t.value)
+        return t
+
+    def t_INT_CONSTANT(t):
+        r'\d+'
+        t.value = int(t.value)
+        return t
+
+    # t_STR_CONSTANT = r'\"((?!\").)*\"' #TODO: Modify to capture \"
+    t_STR_CONSTANT = r'\".*?\"'
+    t_CHAR_CONSTANT = r"\'((?!\').)\'"
+
+    def t_IDENTIFIER(t):
+        r'[a-zA-Z_][a-zA-Z_0-9]*'
+        t.type = toks.reserved.get(t.value,'IDENTIFIER')
+        return t
+
+
     # Separators
     t_STMT_TERMINATOR = r';'
     t_COMMA           = r','
-    t_DOT             = r'\.'
     t_L_PAREN         = r'\('
     t_R_PAREN         = r'\)'
     t_BLOCK_OPENER    = r'\{'
@@ -173,46 +194,36 @@ def main():
     t_MODULO          = r'%'
     t_INCREMENT       = r'\+\+'
     t_DECREMENT       = r'\-\-'
+    t_DOT             = r'\.'
 
-    # Other Identifiers
-    def t_INT_CONSTANT(t):
-        r'\d+'
-        t.value = int(t.value)
-        return t
-
-    t_STR_CONSTANT = r'\"((?!\").)*\"' #TODO: Modify to capture \"
-    t_CHAR_CONSTANT = r"\'((?!\').)\'"
-
-    def t_IDENTIFIER(t):
-        r'[a-zA-Z_][a-zA-Z_0-9]*'
-        t.type = toks.reserved.get(t.value,'IDENTIFIER')
-        return t
+    t_ignore = ' \t'
 
     def t_error(t):
         print("Illegal Character '%s'" % t.value[0])
         t.lexer.skip(1)
 
-    t_ignore = ' \t'
-
     def t_newline(t):
         r'\n+'
         t.lexer.lineno += len(t.value)
 
-#########################################################################################
+    def t_INLINE_COMMENT(t):
+        r'//.*'
+        return t
+
+    def t_BLOCK_COMMENT(t):
+        r'/\*(.|\n)*?\*/'
+        return t
+    #########################################################################################
 
     code = open(sys.argv[1],"r").read()
     print(code)
-
     lexer = lex.lex()
-
     lexer.input(code)
-
     while True:
         tok = lexer.token()
         if not tok:
             break
         print(tok)
-
     print(lexer.lineno)
 
 if __name__ == '__main__':
