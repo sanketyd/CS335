@@ -4,18 +4,8 @@ import sys
 
 class Tokens(object):
     def __init__(self):
-        self.num_types = 0
-        self.num_keywords = 0
-        self.num_operators = 0
-        self.num_separators = 0
-        self.num_misc = 0
+        self.reserved = self._get_reserved()
         self.tokens = self._get_tokens()
-        self.total_reserved_words = self._get_total_reserved_words()
-
-
-    def _get_total_reserved_words(self):
-        return self.num_types + self.num_keywords + self.num_operators + \
-                self.num_separators + self.num_misc
 
 
     def _get_types(self):
@@ -29,7 +19,6 @@ class Tokens(object):
                 'boolean'         : 'BOOLEAN',
                 'short'           : 'SHORT'
                 }
-        self.num_types = len(types)
         return types
 
 
@@ -72,51 +61,48 @@ class Tokens(object):
                 'try'             : 'TRY',
                 'while'           : 'WHILE'
                 }
-        self.num_keywords = len(keywords)
         return keywords
 
 
     def _get_operators(self):
-        operators = {
-                'EQUALS'          : '==',
-                'ASSIGN'          : '=',
-                'GRT'             : '>',
-                'LST'             : '<',
-                'GEQ'             : '>=',
-                'LEQ'             : '<=',
-                'PLUS'            : '+',
-                'MINUS'           : '-',
-                'MULT'            : '*',
-                'DIVIDE'          : '/',
-                'LOGICAL_AND'     : '&&',
-                'LOGICAL_OR'      : '||',
-                'LOGICAL_NOT'     : '!',
-                'NOT_EQUAL'       : '!=',
-                'BITWISE_AND'     : '&',
-                'BITWISE_OR'      : '|',
-                'BITWISE_NOT'     : '~',
-                'BITWISE_XOR'     : '^',
-                'MODULO'          : '%',
-                'INCREMENT'       : '++',
-                'DECREMENT'       : '--'
-                }
-        self.num_operators = len(operators)
+        operators = [
+                'EQUALS',
+                'ASSIGN',
+                'GRT',
+                'LST',
+                'GEQ',
+                'LEQ',
+                'PLUS',
+                'MINUS',
+                'MULT',
+                'DIVIDE',
+                'LOGICAL_AND',
+                'LOGICAL_OR',
+                'LOGICAL_NOT',
+                'NOT_EQUAL',
+                'BITWISE_AND',
+                'BITWISE_OR',
+                'BITWISE_NOT',
+                'BITWISE_XOR',
+                'MODULO',
+                'INCREMENT',
+                'DECREMENT'
+                ]
         return operators
 
 
     def _get_separators(self):
-        separators = {
-                'STMT_TERMINATOR' : ';',
-                'COMMA'           : ',',
-                'DOT'             : '.',
-                'L_PAREN'         : '(',
-                'R_PAREN'         : ')',
-                'BLOCK_OPENER'    : '{',
-                'BLOCK_CLOSER'    : '}',
-                'L_SQBR'          : '[',
-                'R_SQBR'          : ']'
-                }
-        self.num_separators = len(separators)
+        separators = [
+                'STMT_TERMINATOR',
+                'COMMA',
+                'DOT',
+                'L_PAREN',
+                'R_PAREN',
+                'BLOCK_OPENER',
+                'BLOCK_CLOSER',
+                'L_SQBR',
+                'R_SQBR'
+                ]
         return separators
 
 
@@ -130,29 +116,65 @@ class Tokens(object):
                 'COMMENT',
                 'NULL'
                ]
-        self.num_misc = len(misc)
         return misc
 
 
-    def _get_tokens(self):
+    def _get_reserved(self):
         types = self._get_types()
+        keywords = self._get_keywords()
+        reserved = dict(list(types.items()) + list(keywords.items()))
+        return reserved
+
+
+    def _get_tokens(self):
         operators = self._get_operators()
         separators = self._get_separators()
-        keywords = self._get_keywords()
         misc = self._get_misc_words()
-        tokens = list(types.values()) + list(operators.keys()) + \
-                list(separators.keys()) + list(keywords.values()) + \
-                misc
+        reserved = list(self.reserved.values())
+        tokens = operators + separators + misc + reserved
         return tokens
+
 
 def main():
     toks = Tokens()
     tokens = toks._get_tokens()
-################################ Rules for Tokens #######################################
 
-    t_BLOCK_OPENER = r'\{'
-    t_BLOCK_CLOSER = r'\}'
+    ################################ Rules for Tokens #######################################
+    # Separators
+    t_STMT_TERMINATOR = r';'
+    t_COMMA           = r','
+    t_DOT             = r'\.'
+    t_L_PAREN         = r'\('
+    t_R_PAREN         = r'\)'
+    t_BLOCK_OPENER    = r'\{'
+    t_BLOCK_CLOSER    = r'\}'
+    t_L_SQBR          = r'\['
+    t_R_SQBR          = r'\]'
 
+    # Operators
+    t_EQUALS          = r'=='
+    t_ASSIGN          = r'='
+    t_GRT             = r'>'
+    t_LST             = r'<'
+    t_GEQ             = r'>='
+    t_LEQ             = r'<='
+    t_PLUS            = r'\+'
+    t_MINUS           = r'\-'
+    t_MULT            = r'\*'
+    t_DIVIDE          = r'/'
+    t_LOGICAL_AND     = r'&&'
+    t_LOGICAL_OR      = r'\|\|'
+    t_LOGICAL_NOT     = r'!'
+    t_NOT_EQUAL       = r'!='
+    t_BITWISE_AND     = r'&'
+    t_BITWISE_OR      = r'\|'
+    t_BITWISE_NOT     = r'~'
+    t_BITWISE_XOR     = r'\^'
+    t_MODULO          = r'%'
+    t_INCREMENT       = r'\+\+'
+    t_DECREMENT       = r'\-\-'
+
+    # Other Identifiers
     def t_INT_CONSTANT(t):
         r'\d+'
         t.value = int(t.value)
@@ -163,9 +185,7 @@ def main():
 
     def t_IDENTIFIER(t):
         r'[a-zA-Z_][a-zA-Z_0-9]*'
-        t.type = toks._get_keywords().get(t.value,'IDENTIFIER')
-        if t.type == 'IDENTIFIER':
-            t.type = toks._get_types().get(t.value,'IDENTIFIER')
+        t.type = toks.reserved.get(t.value,'IDENTIFIER')
         return t
 
     def t_error(t):
@@ -181,6 +201,7 @@ def main():
 #########################################################################################
 
     code = open(sys.argv[1],"r").read()
+    print(code)
 
     lexer = lex.lex()
 
