@@ -41,16 +41,16 @@ class Tokens(object):
                 'finally'         : 'FINALLY',
                 'for'             : 'FOR',
                 'if'              : 'IF',
-                'implements'      : 'IMPLEMENTS',
+              ##  'implements'      : 'IMPLEMENTS', removed interface
                 'import'          : 'IMPORT',
                 'instanceof'      : 'INSTANCEOF',
-                'interface'       : 'INTERFACE',
+              ##  'interface'       : 'INTERFACE',  removed interface
                 'native'          : 'NATIVE',
                 'new'             : 'NEW',
                 'package'         : 'PACKAGE',
-                'private'         : 'PRIVATE',
-                'protected'       : 'PROTECTED',
-                'public'          : 'PUBLIC',
+              #  'private'         : 'PRIVATE',  removed Data Hiding
+              #  'protected'       : 'PROTECTED',
+              #  'public'          : 'PUBLIC',
                 'return'          : 'RETURN',
                 'static'          : 'STATIC',
                 'super'           : 'SUPER',
@@ -219,12 +219,24 @@ def main():
     print(code)
     lexer = lex.lex()
     lexer.input(code)
+    tokenDict = {}
+    for token in tokens:
+        tokenDict[token] = [0,[]]
     while True:
         tok = lexer.token()
         if not tok:
             break
-        print(tok)
-    print(lexer.lineno)
+        tokenDict[tok.type][0] += 1
+        if tok.value not in tokenDict[tok.type][1]:
+            tokenDict[tok.type][1].append(str(tok.value))
+    #print(tokenDict)
+    #print(lexer.lineno)
+    #print(tokenDict)
+    print("Token\t\t\tOccurences\t\t\tLexemes" )
+    print("-----------------------------------------------------------------------")
+    for key in tokenDict:
+        if(tokenDict[key][0]!=0):
+            print(key + "\t\t\t" + str(tokenDict[key][0]) + "\t\t\t" + ",".join(tokenDict[key][1]))
 
 if __name__ == '__main__':
     main()
