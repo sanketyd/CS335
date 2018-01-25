@@ -59,7 +59,8 @@ class Tokens(object):
                 'throw'           : 'THROW',
                 'throws'          : 'THROWS',
                 'try'             : 'TRY',
-                'while'           : 'WHILE'
+                'while'           : 'WHILE',
+                'lambda'    :   'LAMBDA'#New lambda feature in java
                 }
         return keywords
 
@@ -115,7 +116,8 @@ class Tokens(object):
                 'STR_CONSTANT',
                 'INLINE_COMMENT',
                 'BLOCK_COMMENT',
-                'NULL'
+                'NULL',
+                'LAMBDA_TOKEN',
                ]
         return misc
 
@@ -152,14 +154,16 @@ def main():
         t.value = int(t.value)
         return t
 
-    # t_STR_CONSTANT = r'\"((?!\").)*\"' #TODO: Modify to capture \"
-    t_STR_CONSTANT = r'\".*?\"'
-    t_CHAR_CONSTANT = r"\'((?!\').)\'"
+    t_STR_CONSTANT = r'\"([^\\\n]|(\\.))*?\"' #[^\\\n]: Matches everything except \ and newline.
+                                            #(\\.): Anything with escape char
+    t_CHAR_CONSTANT = r"\'([^\\\n]|(\\.))?\'"
 
     def t_IDENTIFIER(t):
         r'[a-zA-Z_][a-zA-Z_0-9]*'
         t.type = toks.reserved.get(t.value,'IDENTIFIER')
         return t
+
+    t_LAMBDA_TOKEN = r'\->'
 
 
     # Separators
