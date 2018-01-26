@@ -60,7 +60,7 @@ class Tokens(object):
                 'throws'          : 'THROWS',
                 'try'             : 'TRY',
                 'while'           : 'WHILE',
-                'lambda'    :   'LAMBDA'#New lambda feature in java
+                'lambda'          : 'LAMBDA'    #New lambda feature in java
                 }
         return keywords
 
@@ -88,7 +88,15 @@ class Tokens(object):
                 'MODULO',
                 'INCREMENT',
                 'DECREMENT',
-                'DOT'
+                'DOT',
+                'INSTANCEOF',
+                'PLUSEQ',
+                'MINUSEQ',
+                'MULTEQ',
+                'DIVEQ',
+                'MODEQ',
+                'L_SHIFT',
+                'R_SHIFT'
                 ]
         return operators
 
@@ -145,7 +153,7 @@ def main():
     ################################ Rules for Tokens #######################################
     # Other Identifiers
     def t_FLOAT_CONSTANT(t):
-        r'\d+\.\d+'
+        r'\d*\.\d+'
         t.value = float(t.value)
         return t
 
@@ -155,7 +163,7 @@ def main():
         return t
 
     t_STR_CONSTANT = r'\"([^\\\n]|(\\.))*?\"' #[^\\\n]: Matches everything except \ and newline.
-                                            #(\\.): Anything with escape char
+                                              #(\\.): Anything with escape char
     t_CHAR_CONSTANT = r"\'([^\\\n]|(\\.))?\'"
 
     def t_IDENTIFIER(t):
@@ -163,8 +171,7 @@ def main():
         t.type = toks.reserved.get(t.value,'IDENTIFIER')
         return t
 
-    t_LAMBDA_TOKEN = r'\->'
-
+    t_LAMBDA_TOKEN    = r'\->'
 
     # Separators
     t_STMT_TERMINATOR = r';'
@@ -199,6 +206,15 @@ def main():
     t_INCREMENT       = r'\+\+'
     t_DECREMENT       = r'\-\-'
     t_DOT             = r'\.'
+    t_INSTANCEOF      = r'instanceof'
+    t_PLUSEQ          = r'\+= '
+    t_MINUSEQ         = r'-='
+    t_MULTEQ          = r'\*='
+    t_DIVEQ           = r'/='
+    t_MODEQ           = r'%='
+    t_L_SHIFT         = r'<<'
+    t_R_SHIFT         = r'>>'
+
 
     t_ignore = ' \t'
 
@@ -216,6 +232,7 @@ def main():
 
     def t_BLOCK_COMMENT(t):
         r'/\*(.|\n)*?\*/'
+        t.lexer.lineno += t.value.count('\n')
         return t
     #########################################################################################
 
@@ -241,6 +258,7 @@ def main():
     for key in tokenDict:
         if(tokenDict[key][0]!=0):
             print(key + " " * (25 - len(key)) + str(tokenDict[key][0]) + " " * (26 - len(str(tokenDict[key][0]))) + ",".join(tokenDict[key][1]))
+    print(lexer.lineno)
 
 
 if __name__ == '__main__':
