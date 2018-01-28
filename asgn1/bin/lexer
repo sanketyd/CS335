@@ -89,14 +89,15 @@ class Tokens(object):
                 'INCREMENT',
                 'DECREMENT',
                 'DOT',
-                'INSTANCEOF',
                 'PLUSEQ',
                 'MINUSEQ',
                 'MULTEQ',
                 'DIVEQ',
                 'MODEQ',
                 'L_SHIFT',
-                'R_SHIFT'
+                'R_SHIFT',
+                'LSHIFTEQ',
+                'RSHIFTEQ'
                 ]
         return operators
 
@@ -166,11 +167,6 @@ def main():
                                               #(\\.): Anything with escape char
     t_CHAR_CONSTANT = r"\'([^\\\n]|(\\.))?\'"
 
-    def t_IDENTIFIER(t):
-        r'[a-zA-Z_][a-zA-Z_0-9]*'
-        t.type = toks.reserved.get(t.value,'IDENTIFIER')
-        return t
-
     t_LAMBDA_TOKEN    = r'\->'
 
     # Separators
@@ -214,13 +210,16 @@ def main():
     t_MODEQ           = r'%='
     t_L_SHIFT         = r'<<'
     t_R_SHIFT         = r'>>'
+    t_LSHIFTEQ        = r'<<='
+    t_RSHIFTEQ        = r'>>='
 
 
     t_ignore = ' \t'
 
-    def t_error(t):
-        print("Illegal Character '%s'" % t.value[0])
-        t.lexer.skip(1)
+    def t_IDENTIFIER(t):
+        r'[a-zA-Z_][a-zA-Z_0-9]*'
+        t.type = toks.reserved.get(t.value,'IDENTIFIER')
+        return t
 
     def t_newline(t):
         r'\n+'
@@ -234,6 +233,10 @@ def main():
         r'/\*(.|\n)*?\*/'
         t.lexer.lineno += t.value.count('\n')
         return t
+
+    def t_error(t):
+        print("Illegal Character '%s'" % t.value[0])
+        t.lexer.skip(1)
     #########################################################################################
 
     code = open(sys.argv[1],"r").read()
@@ -258,7 +261,6 @@ def main():
     for key in tokenDict:
         if(tokenDict[key][0]!=0):
             print(key + " " * (25 - len(key)) + str(tokenDict[key][0]) + " " * (26 - len(str(tokenDict[key][0]))) + ",".join(tokenDict[key][1]))
-    print(lexer.lineno)
 
 
 if __name__ == '__main__':
