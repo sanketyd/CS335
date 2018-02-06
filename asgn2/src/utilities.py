@@ -18,8 +18,10 @@ symbol_table = dict()
 
 class SymbolTableEntry:
     def __init__():
-        self.live = None
+        self.live = False #Made it false
         self.next_use = None
+
+    def add_address_descriptor(): #Added this because we don't need it in per instruction page table
         self.address_descriptor = set()
 
 
@@ -35,12 +37,14 @@ class Instruction:
         self.label_name = None
         self.jmp_to_line = None
         self.jmp_to_label = None
+        self.per_inst_next_use = dict()
         self.build(statement)
 
     def build(self, statement):
         # TODO:
         # analyse the statement and split it
         # add to symbol table
+        # Also intialize per instruction next use details as nextuse = None & live = False
         pass
 
 
@@ -90,9 +94,11 @@ def next_use(leader, IR_code):
             if not isdigit(instr.out) and not instr.out == None:
                 symbol_table[instr.out].live = False
                 symbol_table[instr.out].next_use = None
+
             if not isdigit(instr.inp1) and not instr.inp1 == None:
                 symbol_table[instr.inp1].live = True
                 symbol_table[instr.inp1].next_use = instr.line_no
+
             if not isdigit(instr.inp2) and not instr.inp2 == None:
                 symbol_table[instr.inp2].live = True
                 symbol_table[instr.inp2].next_use = instr.line_no
