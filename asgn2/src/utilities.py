@@ -15,14 +15,24 @@ library_funcs = [
 
 symbol_table = dict()
 
+reg_descriptor = dict()
+
+reg_descriptor["eax"] = set()
+reg_descriptor["ebx"] = set()
+reg_descriptor["ecx"] = set()
+reg_descriptor["edx"] = set()
+reg_descriptor["esi"] = set()
+reg_descriptor["edi"] = set()
+
 
 class SymbolTableEntry:
-    def __init__():
+    def __init__(self):
         self.live = False #Made it false
         self.next_use = None
 
     def add_address_descriptor(): #Added this because we don't need it in per instruction page table
         self.address_descriptor = set()
+        self.address_descriptor_reg = set()
 
 
 class Instruction:
