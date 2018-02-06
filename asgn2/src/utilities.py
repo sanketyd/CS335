@@ -92,17 +92,20 @@ def next_use(leader, IR_code):
         # print()
         for instr in reversed(basic_block):
             if not isdigit(instr.out) and not instr.out == None:
-                instr.per_inst_next_use[instr.out] = symbol_table[instr.out]
+                instr.per_inst_next_use[instr.out].live = symbol_table[instr.out].live
+                instr.per_inst_next_use[instr.out].next_use = symbol_table[instr.out].next_use
                 symbol_table[instr.out].live = False
                 symbol_table[instr.out].next_use = None
 
             if not isdigit(instr.inp1) and not instr.inp1 == None:
-                instr.per_inst_next_use[instr.inp1] = symbol_table[instr.inp1]
+                instr.per_inst_next_use[instr.inp1].live = symbol_table[instr.inp1].live
+                instr.per_inst_next_use[instr.inp1].next_use = symbol_table[instr.inp1].next_use
                 symbol_table[instr.inp1].live = True
                 symbol_table[instr.inp1].next_use = instr.line_no
 
             if not isdigit(instr.inp2) and not instr.inp2 == None:
-                instr.per_inst_next_use[instr.inp2] = symbol_table[instr.inp2]
+                instr.per_inst_next_use[instr.inp2].live = symbol_table[instr.inp2].live
+                instr.per_inst_next_use[instr.inp2].next_use = symbol_table[instr.inp2].next_use
                 symbol_table[instr.inp2].live = True
                 symbol_table[instr.inp2].next_use = instr.line_no
 
