@@ -1,72 +1,105 @@
 import sys
 import csv
 
-typee_of_ops = [
-        "cond_jump"
-        ]
+leader_instructions = [
+    "ifgoto",
+    "ret",
+    "label",
+    "call"
+]
+
+library_funcs = [
+    "print",
+    "input"
+]
+
+symbol_table = dict()
+
+
+class SymbolTableEntry:
+    def __init__():
+        self.live = None
+        self.next_use = None
+        self.address_descriptor = set()
+
 
 class Instruction:
-    def __init__(self):
-        self.line_no           = -1     # line number of instr
-        self.op                = None   # operator
-        self.inp1              = None   # operand1
-        self.inp2              = None   # operand2
-        self.out               = None   # output var
-        self.label             = None   # label name, if any
-        self.jmp_to_line       = None   # jump(if any) to which line number
-        self.jmp_to_label      = None   # jump(if any) to which label name
-        self.library_func_name = None   # which library func is used(if any)
+    def __init__(self, statement):
+        self.line_no = int(statement[0].strip())
+        self.label_to_be_added = False
+        self.inp1 = None
+        self.inp2 = None
+        self.out = None
+        self.operation = None
+        self.instr_type = None
+        self.label_name = None
+        self.jmp_to_line = None
+        self.jmp_to_label = None
+        self.build(statement)
 
-    def build(self, line):
-        '''
-        Given a string in 3 Address Codde form,
-        build the required structure for IR
-        representation
-        '''
-        self.line_no = int(line[0].strip())
-        op_type = line[1].strip()
-        # possibilities for op_type
-        #     ->  +, -, *, /
-        #     ->  =
-        #     ->  ifgoto
-        #     ->  call
-        #     ->  ret
-        #     ->  label
-        #     ->  print
-        if op_type == "ifgoto":
-            self.op = line[2].strip()
-            self.inp1 = line[3].strip()
-            self.inp2 = line[4].strip()
-            self.jmp_to_line = line[5].strip()
-        elif op_type == "call":
-            self.jmp_to_label = line[2].strip()
-        elif op_type == "ret":
-            self.library_func_name = "return"
-        elif op_type == "label":
-            self.label = param[2].strip()
-        elif op_type == "print":
-            self.inp1 = line[2].strip()
-            self.library_func_name = "print"
-        elif op_type == "=":
-            self.op = op_type
-            # TODO
-        else:
-            self.op = op_type
-            self.out = line[2].strip()
-            self.inp1 = line[3].strip()
-            self.inp2 = line[4].strip()
+    def build(self, statement):
+        # TODO:
+        # analyse the statement and split it
+        # add to symbol table
+        pass
+
 
 
 def read_three_address_code(filename):
     '''
     Given a csv file `filename`, read the file
-    and store it as a list of Instruction objects
+    and find the basic blocks
     '''
+    leader = set()
+    leader.add(1)
     IR_code = []
     with open(filename, 'r') as csvfile:
         instruction_set = csv.reader(csvfile, delimiter=',')
-        for line in instruction_set:
-            instruction = Instruction()
-            instruction.build(line)
-            IR_code.append(instruction)
-    return IR_code
+        for statement in instruction_set:
+            IR = Instruction(statement)
+            IR_code.append(IR)
+            line_no = IR.line_no
+            instr_type = statement[1].strip()
+            if instr_type in leader_instructions:
+                if instr_type != "label":
+                    line_no += 1
+                leader.add(line_no)
+            if instr_type == "ifgoto":
+                goto_line = statement[-1].strip()
+                if goto_line.isdigit():
+                    goto_line = int(goto_line)
+                    leader.add(goto_line)
+                    IR_code[goto_line - 1].label_to_be_added = True
+
+    return (sorted(leader), IR_code)
+
+
+def next_use(leader, IR_code):
+    '''
+    This function determines liveness and next
+    use information for each statement in basic block
+
+    Input: first line number of basic block
+    '''
+    for b_start in range(len(leader) -  1):
+        basic_block = IR_code[leader[b_start] - 1:leader[b_start + 1] - 1]
+        # for x in basic_block:
+            # print(x.line_no)
+        # print()
+        for instr in reversed(basic_block):
+            if not isdigit(instr.out) and not instr.out == None:
+                symbol_table[instr.out].live = False
+                symbol_table[instr.out].next_use = None
+            if not isdigit(instr.inp1) and not instr.inp1 == None:
+                symbol_table[instr.inp1].live = True
+                symbol_table[instr.inp1].next_use = instr.line_no
+            if not isdigit(instr.inp2) and not instr.inp2 == None:
+                symbol_table[instr.inp2].live = True
+                symbol_table[instr.inp2].next_use = instr.line_no
+
+
+
+
+leader, IR_code = read_three_address_code("../test/test1.csv")
+print(leader)
+next_use(leader, IR_code)
