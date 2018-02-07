@@ -3,24 +3,6 @@ from utilities import *
 def save_reg_contents(variables):
     pass
 
-# def is_any_reg_empty():
-    # for reg in reg_descriptor.keys():
-        # if reg_descriptor[reg] == None:
-            # return reg
-    # return  None
-
-# def get_reg_by_replacement(var_list):
-    # next_use = 100000000
-    # reg = None
-    # for regi,var in reg_descriptor:
-        # if var not in var_list and symbol_table[var].next_use < next_use:
-            # next_use = symbol_table[var].next_use
-            # reg = regi
-    # symbol_table[reg_descriptor[reg]].address_descriptor_reg  = None
-    # #TODO: Save variable in m,emory if it's not alrready in there
-    # return reg
-
-
 def get_reg(instr):
     inp1 = instr.inp1
     inp2 = instr.inp2
@@ -44,11 +26,11 @@ def get_reg(instr):
             # # the difficult case
             # inp2_reg = get_reg_by_replacement([inp1,inp2,out])
 
-    if out != None and not isdigit(out):
+    if is_valid_sym(out):
         for reg_name in symbol_table[inp1].address_descriptor_reg:
             if len(reg_descriptor[reg_name]) == 1 and instr.per_inst_next_use[inp1].next_use == None:
                 return reg_name
-        for key,value in reg_descriptor:
+        for key, value in reg_descriptor:
             if len(value) == 0:
                 return key
 
@@ -63,5 +45,5 @@ def get_reg(instr):
                         R = reg
             save_reg_contents(reg_descriptor[R])
             return R
-        
+
         return None

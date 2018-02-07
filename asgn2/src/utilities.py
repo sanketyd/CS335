@@ -24,9 +24,14 @@ reg_descriptor["edx"] = set()
 reg_descriptor["esi"] = set()
 reg_descriptor["edi"] = set()
 
+def is_valid_sym(symbol):
+    if symbol != None and not symbol.isdigit():
+        return True
+    return False
 
 class SymbolTableEntry:
     def __init__(self):
+        self.value = None
         self.live = False #Made it false
         self.next_use = None
         self.address_descriptor_mem = set()
@@ -58,7 +63,7 @@ class Instruction:
         Add the symbol into symbol table if not already exists
         '''
         for symbol in symbols:
-            if symbol != None and not symbol.isdigit():
+            if is_valid_sym(symbol):
                 if symbol not in symbol_table:
                     symbol_table[symbol] = SymbolTableEntry()
 
@@ -147,7 +152,7 @@ class Instruction:
                 self.out, self.array_index_o
             ]
         for symbol in symbols:
-            if symbol != None and not symbol.isdigit():
+            if is_valid_sym(symbol):
                 self.per_inst_next_use[symbol] = SymbolTableEntry()
 
 
@@ -193,19 +198,19 @@ def next_use(leader, IR_code):
             # print(x.line_no)
         # print()
         for instr in reversed(basic_block):
-            if not instr.out == None and not instr.out.isdigit():
+            if is_valid_sym(instr.out):
                 instr.per_inst_next_use[instr.out].live = symbol_table[instr.out].live
                 instr.per_inst_next_use[instr.out].next_use = symbol_table[instr.out].next_use
                 symbol_table[instr.out].live = False
                 symbol_table[instr.out].next_use = None
 
-            if not instr.inp1 == None and not instr.inp1.isdigit():
+            if is_valid_sym(instr.inp1):
                 instr.per_inst_next_use[instr.inp1].live = symbol_table[instr.inp1].live
                 instr.per_inst_next_use[instr.inp1].next_use = symbol_table[instr.inp1].next_use
                 symbol_table[instr.inp1].live = True
                 symbol_table[instr.inp1].next_use = instr.line_no
 
-            if not instr.inp2 == None and not instr.inp2.isdigit():
+            if is_valid_sym(instr.inp2):
                 instr.per_inst_next_use[instr.inp2].live = symbol_table[instr.inp2].live
                 instr.per_inst_next_use[instr.inp2].next_use = symbol_table[instr.inp2].next_use
                 symbol_table[instr.inp2].live = True
