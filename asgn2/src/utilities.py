@@ -34,6 +34,7 @@ class SymbolTableEntry:
         self.value = None
         self.live = False #Made it false
         self.next_use = None
+        self.array_size = None
         self.address_descriptor_mem = set()
         self.address_descriptor_reg = set()
 
@@ -58,14 +59,22 @@ class Instruction:
         self.build(statement)
         self.populate_per_inst_next_use()
 
-    def add_to_symbol_table(self, symbols):
+    def add_to_symbol_table(self, symbols, is_array_dec = False):
         '''
         Add the symbol into symbol table if not already exists
         '''
-        for symbol in symbols:
-            if is_valid_sym(symbol):
-                if symbol not in symbol_table:
-                    symbol_table[symbol] = SymbolTableEntry()
+        if not is_array_dec:
+            for symbol in symbols:
+                if is_valid_sym(symbol):
+                    if symbol not in symbol_table.keys():
+                        symbol_table[symbol] = SymbolTableEntry()
+                        symbol_table[symbol].address_descriptor_mem.add(symbol)
+        else:
+            if is_valid_sym(symbols[0]):
+                if symbols[0] not in symbol_table.keys():
+                    symbol_table[symbols[0]] = SymbolTableEntry()
+                    symbol_table[symbols[0]].address_descriptor_mem.add(symbols[0])
+                    symbol_table[symbols[0]].array_size = symbols[1]
 
 
     def handle_array_notation(self, symbol):
@@ -131,6 +140,11 @@ class Instruction:
                 self.out, self.array_index_o
             ])
 
+        elif instr_type == "decl_array":
+            self.instr_type = "array_declarition"
+            self.inp1, self.array_index_i1 = self.handle_array_notation(statement[-1].strip())
+            self.add_to_symbol_table([self.inp1, self.array_index_i1], True)
+
         else:
             # 10, +, a, a, b
             self.instr_type = "arithmetic"
@@ -181,42 +195,6 @@ def read_three_address_code(filename):
                     goto_line = int(goto_line)
                     leader.add(goto_line)
                     IR_code[goto_line - 1].label_to_be_added = True
+    leader.add(len(IR_code)+1)
 
     return (sorted(leader), IR_code)
-
-
-def next_use(leader, IR_code):
-    '''
-    This function determines liveness and next
-    use information for each statement in basic block
-
-    Input: first line number of basic block
-    '''
-    for b_start in range(len(leader) -  1):
-        basic_block = IR_code[leader[b_start] - 1:leader[b_start + 1] - 1]
-        # for x in basic_block:
-            # print(x.line_no)
-        # print()
-        for instr in reversed(basic_block):
-            if is_valid_sym(instr.out):
-                instr.per_inst_next_use[instr.out].live = symbol_table[instr.out].live
-                instr.per_inst_next_use[instr.out].next_use = symbol_table[instr.out].next_use
-                symbol_table[instr.out].live = False
-                symbol_table[instr.out].next_use = None
-
-            if is_valid_sym(instr.inp1):
-                instr.per_inst_next_use[instr.inp1].live = symbol_table[instr.inp1].live
-                instr.per_inst_next_use[instr.inp1].next_use = symbol_table[instr.inp1].next_use
-                symbol_table[instr.inp1].live = True
-                symbol_table[instr.inp1].next_use = instr.line_no
-
-            if is_valid_sym(instr.inp2):
-                instr.per_inst_next_use[instr.inp2].live = symbol_table[instr.inp2].live
-                instr.per_inst_next_use[instr.inp2].next_use = symbol_table[instr.inp2].next_use
-                symbol_table[instr.inp2].live = True
-                symbol_table[instr.inp2].next_use = instr.line_no
-
-
-leader, IR_code = read_three_address_code("../test/test1.csv")
-print(leader)
-next_use(leader, IR_code)
