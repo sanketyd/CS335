@@ -13,7 +13,13 @@ class CodeGenerator:
                 print(str(symbol) + "\tdd\t0")
 
     def op_add(self, instr):
-        pass
+        R1, R2, flag = get_reg(instr)
+        if flag:
+            print("\tmov "+ R1 + "," + instr.inp1)
+        if R2 == None:
+            R2 = instr.inp2
+        print("\tadd " + R1 + "," + R2)
+
 
     def op_sub(self, instr):
         pass
@@ -35,21 +41,9 @@ class CodeGenerator:
 
     def gen_code(self, instr):
         instr_type = instr.instr_type
-        if instr_type == "assignment":
-            # TODO
-            pass
-
-        if instr.instr_type == "arithmetic":
-            R1, R2, flag = get_reg(instr)
-            if flag:
-                print("mov "+ str(R1) + "," + str(instr.inp1))
-            # print(self.op_dict[instr.operation] + " " + str(reg) + "," + str(instr.inp2))
-            if R2 == None:
-                R2 = str(instr.inp2)
+        if instr_type == "arithmetic":
             if instr.operation == "+":
-                print("add " + R1 + "," + R2)
-            elif instr.operation == "*":
-                print("imul " + R1 + "," + R2)
+                self.op_add(instr)
 
 
 def next_use(leader, IR_code):
