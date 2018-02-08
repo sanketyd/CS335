@@ -94,5 +94,8 @@ def next_use(leader, IR_code):
 
 if __name__ == "__main__":
     leader, IR_code = read_three_address_code("../test/test1.csv")
-    CodeGenerator().gen_data_section()
+    generator = CodeGenerator()
+    generator.gen_data_section()
+    generator.gen_start_template()
     next_use(leader, IR_code)
+    generator.gen_exit_template()

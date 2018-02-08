@@ -16,3 +16,4 @@
 16,+,i,i,1
 17,ifgoto,leq,i,10,13
 18,+,a, 3, 4
+19, decl_array, pandav[69]
