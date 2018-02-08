@@ -9,28 +9,42 @@ def save_reg_contents(reg):
 
 
 def get_reg(instr):
+    '''
+    Uses next use heuristic to allocate registers
+    Returns 3 values:
+    1. R1: The best register for inp1
+    2. R2: if inp2 is already in a register, returns it, otherwise None
+    3. flag: boolean to know whether a register has to be allocated to inp1
+    '''
     inp1 = instr.inp1
     inp2 = instr.inp2
     out = instr.out
 
     if is_valid_sym(out):
-        print("Hi there!")
+        # check if inp2 is in a register
+        R2 = None
+        if is_valid_sym(inp2):
+            if len(symbol_table[inp2].address_descriptor_reg) != 0:
+                R2 = symbol_table[inp2].address_descriptor_reg[0]
+
+        # allocate register for inp1
         if is_valid_sym(inp1):
             for reg_name in symbol_table[inp1].address_descriptor_reg:
                 if len(reg_descriptor[reg_name]) == 1 and instr.per_inst_next_use[inp1].next_use == None:
-                    return reg_name
+                    return reg_name, R2, False
 
         for key, value in reg_descriptor.items():
             if len(value) == 0:
-                return key
+                return key, R2, True
 
+        R1 = None
         next_use = -1000000000
-        R = None
-        for reg,content in reg_descriptor:
+        for reg, content in reg_descriptor.items():
             for var in content:
                 n_use = symbol_table[var].next_use
                 if n_use > next_use:
                     next_use = n_use
-                    R = reg
-        save_reg_contents(R)
-        return R
+                    R1 = reg
+        save_reg_contents(R1)
+
+        return R1, R2, True

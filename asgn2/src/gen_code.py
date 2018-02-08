@@ -2,22 +2,56 @@
 from get_reg import *
 from utilities import *
 
-def gen_data_section():
-    print("section\t.data")
-    for symbol in symbol_table.keys():
-        if symbol_table[symbol].array_size:
-            print(str(symbol) + "\tdd\t" + str(symbol_table[symbol].array_size) + "(0)")
-        else:
-            print(str(symbol) + "\tdd\t0")
+class CodeGenerator:
+    def gen_data_section(self):
+        print("section\t.data")
+        for symbol in symbol_table.keys():
+            if symbol_table[symbol].array_size != None:
+                # TODO: DUP required??
+                print(str(symbol) + "\tdd\t" + str(symbol_table[symbol].array_size) + "(0)")
+            else:
+                print(str(symbol) + "\tdd\t0")
 
-def gen_code(instr):
-    if instr.instr_type == "arithmetic":
-        reg = get_reg(instr)
-        print("mov "+str(reg)+","+str(instr.inp1))
-        print("add "+str(reg) + "," + str(instr.inp2))
-        ######################## just trying something ############################
-        
-        ###########################################################################
+    def op_add(self, instr):
+        pass
+
+    def op_sub(self, instr):
+        pass
+
+    def op_mult(self, instr):
+        pass
+
+    def op_div(self, instr):
+        pass
+
+    def op_assign(self, instr):
+        pass
+
+    def op_logical(self, instr):
+        pass
+
+    def op_modulo(self, instr):
+        pass
+
+    def gen_code(self, instr):
+        instr_type = instr.instr_type
+        if instr_type == "assignment":
+            # TODO
+            pass
+
+        if instr.instr_type == "arithmetic":
+            R1, R2, flag = get_reg(instr)
+            if flag:
+                print("mov "+ str(R1) + "," + str(instr.inp1))
+            # print(self.op_dict[instr.operation] + " " + str(reg) + "," + str(instr.inp2))
+            if R2 == None:
+                R2 = str(instr.inp2)
+            if instr.operation == "+":
+                print("add " + R1 + "," + R2)
+            elif instr.operation == "*":
+                print("imul " + R1 + "," + R2)
+
+
 def next_use(leader, IR_code):
     '''
     This function determines liveness and next
@@ -25,6 +59,7 @@ def next_use(leader, IR_code):
 
     Input: first line number of basic block
     '''
+    generator = CodeGenerator()
     for b_start in range(len(leader) -  1):
         basic_block = IR_code[leader[b_start] - 1:leader[b_start + 1] - 1]
         # for x in basic_block:
@@ -49,9 +84,10 @@ def next_use(leader, IR_code):
                 symbol_table[instr.inp2].live = True
                 symbol_table[instr.inp2].next_use = instr.line_no
 
-            gen_code(instr)
+        for instr in basic_block:
+            generator.gen_code(instr)
 
 if __name__ == "__main__":
     leader, IR_code = read_three_address_code("../test/test1.csv")
-    gen_data_section()
+    CodeGenerator().gen_data_section()
     next_use(leader, IR_code)

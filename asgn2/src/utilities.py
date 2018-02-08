@@ -14,7 +14,6 @@ library_funcs = [
 ]
 
 symbol_table = dict()
-
 reg_descriptor = dict()
 
 reg_descriptor["eax"] = set()
@@ -32,12 +31,11 @@ def is_valid_sym(symbol):
 class SymbolTableEntry:
     def __init__(self):
         self.value = None
-        self.live = False #Made it false
+        self.live = False
         self.next_use = None
         self.array_size = None
         self.address_descriptor_mem = set()
         self.address_descriptor_reg = set()
-
 
 
 class Instruction:
