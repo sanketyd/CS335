@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from get_reg import *
 from utilities import *
 
@@ -14,7 +15,9 @@ def gen_code(instr):
         reg = get_reg(instr)
         print("mov "+str(reg)+","+str(instr.inp1))
         print("add "+str(reg) + "," + str(instr.inp2))
-
+        ######################## just trying something ############################
+        
+        ###########################################################################
 def next_use(leader, IR_code):
     '''
     This function determines liveness and next
