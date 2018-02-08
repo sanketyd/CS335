@@ -7,7 +7,6 @@ class CodeGenerator:
         print("section\t.data")
         for symbol in symbol_table.keys():
             if symbol_table[symbol].array_size != None:
-                # TODO: DUP required??
                 print(str(symbol) + "\ttimes\t" + str(symbol_table[symbol].array_size) + "\tdd\t0")
             else:
                 print(str(symbol) + "\tdd\t0")
@@ -15,7 +14,7 @@ class CodeGenerator:
     def gen_start_template(self):
         print()
         print("section .text")
-        print("global _start")
+        print("\tglobal _start")
         print("_start:")
 
     def gen_exit_template(self):
