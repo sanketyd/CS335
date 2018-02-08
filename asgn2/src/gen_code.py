@@ -7,7 +7,6 @@ class CodeGenerator:
         print("section\t.data")
         for symbol in symbol_table.keys():
             if symbol_table[symbol].array_size != None:
-                # TODO: DUP required??
                 print(str(symbol) + "\ttimes\t" + str(symbol_table[symbol].array_size) + "\tdd\t0")
             else:
                 print(str(symbol) + "\tdd\t0")
@@ -15,7 +14,7 @@ class CodeGenerator:
     def gen_start_template(self):
         print()
         print("section .text")
-        print("global _start")
+        print("\tglobal _start")
         print("_start:")
 
     def gen_exit_template(self):
@@ -33,10 +32,22 @@ class CodeGenerator:
 
 
     def op_sub(self, instr):
-        pass
+        R1, R2, flag = get_reg(instr)
+        if flag:
+            print("\tmov " + R1 + "," + instr.inp1)
+        if R2 == None:
+            R2 = instr.inp2
+        print("\tsub " + R1 + "," + R2)
+
 
     def op_mult(self, instr):
-        pass
+        R1, R2, flag = get_reg(instr)
+        if flag:
+            print("\tmov " + R1 + "," + instr.inp1)
+        if R2 == None:
+            R2 = instr.inp2
+        print("\timul " + R1 + "," + R2)    ###### Can do bit-shift if multiplier is 2
+
 
     def op_div(self, instr):
         pass
@@ -44,8 +55,24 @@ class CodeGenerator:
     def op_assign(self, instr):
         pass
 
-    def op_logical(self, instr):
-        pass
+    def op_logical(self, instr):           ### Doing same operation for normal and, or, not and bitwise and, or, not. No special instr for normal logical ops.
+        R1, R2, flag = get_reg(instr)
+        if flag:
+            print("\tmov " + R1 + "," + instr.inp1)
+        if R2 == None:
+            R2 = instr.inp2
+        def log_op(x):
+            return {
+                    "&" : "and ",
+                    "|" : "or ",
+                    "^" : "xor ",
+                    "&&": "and ",
+                    "||": "or ",
+            }[x]
+        if (instr.operation != "~" and instr.operation != "!"):
+            print("\t" + log_op(instr.operation) + R1 + "," + R2)
+        else:
+            print("\tnot " + R1)
 
     def op_modulo(self, instr):
         pass
@@ -55,8 +82,12 @@ class CodeGenerator:
         if instr_type == "arithmetic":
             if instr.operation == "+":
                 self.op_add(instr)
-
-
+            if instr.operation == "-":
+                self.op_sub(instr)
+            if instr.operation == "*":
+                self.op_mult(instr)
+        if instr_type == "logical":
+            self.op_logical(instr)
 def next_use(leader, IR_code):
     '''
     This function determines liveness and next
