@@ -8,9 +8,20 @@ class CodeGenerator:
         for symbol in symbol_table.keys():
             if symbol_table[symbol].array_size != None:
                 # TODO: DUP required??
-                print(str(symbol) + "\tdd\t" + str(symbol_table[symbol].array_size) + "(0)")
+                print(str(symbol) + "\ttimes\t" + str(symbol_table[symbol].array_size) + "\tdd\t0")
             else:
                 print(str(symbol) + "\tdd\t0")
+
+    def gen_start_template(self):
+        print()
+        print("section .text")
+        print("global _start")
+        print("_start:")
+
+    def gen_exit_template(self):
+        print()
+        print("\tmov eax,1")
+        print("\tint 0x80")
 
     def op_add(self, instr):
         pass
