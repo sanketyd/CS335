@@ -5,6 +5,7 @@ from utilities import *
 class CodeGenerator:
     def gen_data_section(self):
         print("section\t.data")
+        print("print_int:\tdb\t\"%d\",10,0")
         for symbol in symbol_table.keys():
             if symbol_table[symbol].array_size != None:
                 print(str(symbol) + "\ttimes\t" + str(symbol_table[symbol].array_size) + "\tdd\t0")
@@ -14,13 +15,13 @@ class CodeGenerator:
     def gen_start_template(self):
         print()
         print("section .text")
-        print("\tglobal _start")
-        print("_start:")
+        print("\tglobal _main")
+        print("main:")
 
     def gen_exit_template(self):
         print()
-        print("\tmov eax,1")
-        print("\tint 0x80")
+        print("\tmov eax,0")
+        print("\tret")
 
     def op_add(self, instr):
         R1, R2, flag = get_reg(instr)
