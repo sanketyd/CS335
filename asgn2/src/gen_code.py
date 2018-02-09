@@ -53,11 +53,19 @@ class CodeGenerator:
     def op_div(self, instr):
         pass
 
+    def op_modulo(self, instr):
+        R1, R2, flag = get_reg(instr)
+        if flag:
+            print("\tmov " + R1 + "," + instr.inp1)
+        if R2 == None:
+            R2 = instr.inp2
+        print("\tsub " + R1 + "," + R2)
+
     def op_assign(self, instr):
         #R1, R2, flag = get_reg(instr)
         if instr.inp1 not in symbol_table.keys():   #### For excluding x=y assignments, check if inp1 not in symbol_table
             print("\tmov " + instr.out + "," + instr.inp1)
-        
+
     def op_logical(self, instr):           ### Doing same operation for normal and, or, not and bitwise and, or, not. No special instr for normal logical ops.
         R1, R2, flag = get_reg(instr)
         if flag:
@@ -77,22 +85,52 @@ class CodeGenerator:
         else:
             print("\tnot " + R1)
 
-    def op_modulo(self, instr):
+    def op_ifgoto(self, instr):
+        pass
+
+    def op_label(self, instr):
+        print(instr.label_name + ":")
+
+    def op_call_function(self, instr):
+        pass
+
+    def op_return(self, instr):
         pass
 
     def gen_code(self, instr):
         instr_type = instr.instr_type
+        if instr.label_to_be_added == True:
+            print("label_" + str(instr.line_no) + ":")
+
         if instr_type == "arithmetic":
             if instr.operation == "+":
                 self.op_add(instr)
-            if instr.operation == "-":
+            elif instr.operation == "-":
                 self.op_sub(instr)
-            if instr.operation == "*":
+            elif instr.operation == "*":
                 self.op_mult(instr)
-        if instr_type == "logical":
+
+        elif instr_type == "logical":
             self.op_logical(instr)
-        if instr_type == "assignment":
+
+        elif instr_type == "assignment":
             self.op_assign(instr)
+
+        elif instr_type == "ifgoto":
+            self.op_ifgoto(instr)
+
+        elif instr_type == "return":
+            self.op_return(instr)
+
+        elif instr_type == "label":
+            self.op_label(instr)
+
+        elif instr_type == "func_call":
+            self.op_call_function(instr)
+
+        elif instr_type == "library_func":
+            pass
+
 def next_use(leader, IR_code):
     '''
     This function determines liveness and next
@@ -129,7 +167,7 @@ def next_use(leader, IR_code):
             generator.gen_code(instr)
 
 if __name__ == "__main__":
-    leader, IR_code = read_three_address_code("../test/test1.csv")
+    leader, IR_code = read_three_address_code("../test/ex1.csv")
     generator = CodeGenerator()
     generator.gen_data_section()
     generator.gen_start_template()

@@ -8,11 +8,6 @@ leader_instructions = [
     "call"
 ]
 
-library_funcs = [
-    "print",
-    "input"
-]
-
 symbol_table = dict()
 reg_descriptor = dict()
 
@@ -57,7 +52,7 @@ class Instruction:
         self.build(statement)
         self.populate_per_inst_next_use()
 
-    def add_to_symbol_table(self, symbols, is_array_dec = False):
+    def add_to_symbol_table(self, symbols, is_array_dec=False):
         '''
         Add the symbol into symbol table if not already exists
         '''
@@ -142,8 +137,9 @@ class Instruction:
             self.instr_type = "array_declarition"
             self.inp1, self.array_index_i1 = self.handle_array_notation(statement[-1].strip())
             self.add_to_symbol_table([self.inp1, self.array_index_i1], True)
+
         elif instr_type in ["|","||","&","&&","~","!"]:
-            # 10, +, a, a, b
+            # 10, &&, a, a, b
             self.instr_type = "logical"
             self.inp1, self.array_index_i1 = self.handle_array_notation(statement[3].strip())
             self.inp2, self.array_index_i2 = self.handle_array_notation(statement[4].strip())
