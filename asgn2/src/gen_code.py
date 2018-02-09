@@ -88,6 +88,7 @@ class CodeGenerator:
                 self.op_mult(instr)
         if instr_type == "logical":
             self.op_logical(instr)
+
 def next_use(leader, IR_code):
     '''
     This function determines liveness and next
