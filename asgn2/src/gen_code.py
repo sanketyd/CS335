@@ -38,50 +38,77 @@ class CodeGenerator:
     def op_add(self, instr):
         R1, R2, flag = get_reg(instr)
         if flag:
-            print("\tmov "+ R1 + "," + instr.inp1)
+            print("\tmov "+ R1 + ", " + instr.inp1)
         if R2 == None:
             R2 = instr.inp2
-        print("\tadd " + R1 + "," + R2)
+        print("\tadd " + R1 + ", " + R2)
 
 
     def op_sub(self, instr):
         R1, R2, flag = get_reg(instr)
         if flag:
-            print("\tmov " + R1 + "," + instr.inp1)
+            print("\tmov " + R1 + ", " + instr.inp1)
         if R2 == None:
             R2 = instr.inp2
-        print("\tsub " + R1 + "," + R2)
+        print("\tsub " + R1 + ", " + R2)
 
 
     def op_mult(self, instr):
         R1, R2, flag = get_reg(instr)
         if flag:
-            print("\tmov " + R1 + "," + instr.inp1)
+            print("\tmov " + R1 + ", " + instr.inp1)
         if R2 == None:
             R2 = instr.inp2
-        print("\timul " + R1 + "," + R2)    ###### Can do bit-shift if multiplier is 2
+        print("\timul " + R1 + ", " + R2)    ###### Can do bit-shift if multiplier is 2
 
 
     def op_div(self, instr):
-        pass
+        R1, R2, flag = get_reg(instr)
+        save_reg_contents("eax")
+        save_reg_contents("edx")
+        if flag:
+            print("mov eax, " + instr.inp1)
+        elif R1 != "eax":
+            # if inp1 is in a register other than eax
+            print("mov eax, " + R1)
+        if R2 == None:
+            # use mem address for inp2
+            print("idiv DWORD PTR [" + instr.inp2 + "]")
+        else:
+            print("idiv " + R2)
+
+        reg_descriptor["eax"].add(instr.out)
+        symbol_table[instr.out].address_descriptor_reg.add("eax")
 
     def op_modulo(self, instr):
         R1, R2, flag = get_reg(instr)
+        save_reg_contents("eax")
+        save_reg_contents("edx")
         if flag:
-            print("\tmov " + R1 + "," + instr.inp1)
+            print("mov eax, " + instr.inp1)
+        elif R1 != "eax":
+            # if inp1 is in a register other than eax
+            print("mov eax, " + R1)
         if R2 == None:
-            R2 = instr.inp2
-        print("\tsub " + R1 + "," + R2)
+            # use mem address for inp2
+            print("idiv DWORD PTR [" + instr.inp2 + "]")
+        else:
+            print("idiv " + R2)
+
+        reg_descriptor["edx"].add(instr.out)
+        symbol_table[instr.out].address_descriptor_reg.add("edx")
 
     def op_assign(self, instr):
         #R1, R2, flag = get_reg(instr)
         if instr.inp1 not in symbol_table.keys():   #### For excluding x=y assignments, check if inp1 not in symbol_table
-            print("\tmov " + instr.out + "," + instr.inp1)
+            print("\tmov " + instr.out + ", " + instr.inp1)
 
-    def op_logical(self, instr):           ### Doing same operation for normal and, or, not and bitwise and, or, not. No special instr for normal logical ops.
+    def op_logical(self, instr):
+        # Doing same operation for normal and, or, not and bitwise and, or, not.
+        # No special instr for normal logical ops.
         R1, R2, flag = get_reg(instr)
         if flag:
-            print("\tmov " + R1 + "," + instr.inp1)
+            print("\tmov " + R1 + ", " + instr.inp1)
         if R2 == None:
             R2 = instr.inp2
         def log_op(x):
@@ -93,7 +120,7 @@ class CodeGenerator:
                     "||": "or ",
             }[x]
         if (instr.operation != "~" and instr.operation != "!"):
-            print("\t" + log_op(instr.operation) + R1 + "," + R2)
+            print("\t" + log_op(instr.operation) + R1 + ", " + R2)
         else:
             print("\tnot " + R1)
 
