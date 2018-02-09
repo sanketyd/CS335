@@ -25,15 +25,15 @@ class CodeGenerator:
         print("\tret")
 
     def op_print_int(self, instr):
-        print("push ebp")
-        print("mov ebp,esp")
+        print("\tpush ebp")
+        print("\tmov ebp,esp")
         loc = get_best_location(instr.inp1)
-        print("push dword " + str(loc))
-        print("push dword print_int")
-        print("call printf")
-        print("add esp, 8")
-        print("mov esp, ebp")
-        print("pop ebp")
+        print("\tpush dword " + str(loc))
+        print("\tpush dword print_int")
+        print("\tcall printf")
+        print("\tadd esp, 8")
+        print("\tmov esp, ebp")
+        print("\tpop ebp")
 
     def op_add(self, instr):
         R1, R2, flag = get_reg(instr)

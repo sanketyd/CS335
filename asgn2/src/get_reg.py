@@ -6,7 +6,7 @@ def get_best_location(symbol):
         if len(symbol_table[symbol].address_descriptor_reg):
             return next(iter(symbol_table[symbol].address_descriptor_reg))
         else:
-            return symbol
+            return "[" + symbol + "]"
 
 def save_context():
     for reg, symbols in reg_descriptor.items():
