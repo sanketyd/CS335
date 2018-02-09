@@ -54,8 +54,10 @@ class CodeGenerator:
         pass
 
     def op_assign(self, instr):
-        pass
-
+        #R1, R2, flag = get_reg(instr)
+        if instr.inp1 not in symbol_table.keys():   #### For excluding x=y assignments, check if inp1 not in symbol_table
+            print("\tmov " + instr.out + "," + instr.inp1)
+        
     def op_logical(self, instr):           ### Doing same operation for normal and, or, not and bitwise and, or, not. No special instr for normal logical ops.
         R1, R2, flag = get_reg(instr)
         if flag:
@@ -89,6 +91,8 @@ class CodeGenerator:
                 self.op_mult(instr)
         if instr_type == "logical":
             self.op_logical(instr)
+        if instr_type == "assignment":
+            self.op_assign(instr)
 def next_use(leader, IR_code):
     '''
     This function determines liveness and next
@@ -125,6 +129,6 @@ def next_use(leader, IR_code):
             generator.gen_code(instr)
 
 if __name__ == "__main__":
-    leader, IR_code = read_three_address_code("../test/test1.csv")
+    leader, IR_code = read_three_address_code("../test/test2.csv")
     CodeGenerator().gen_data_section()
     next_use(leader, IR_code)
