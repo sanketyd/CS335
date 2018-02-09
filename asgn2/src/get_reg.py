@@ -1,11 +1,24 @@
 from utilities import *
 
 #TODO: update address descriptor and register descriptor in both
+def get_best_location(symbol):
+    if is_valid_sym(symbol):
+        if len(symbol_table[symbol].address_descriptor_reg):
+            return next(iter(symbol_table[symbol].address_descriptor_reg))
+        else:
+            return symbol
+
+def save_context():
+    for reg, symbols in reg_descriptor.items():
+        for symbol in symbols:
+            print("\tmov " + str(symbol) + "," + str(reg))
+
+
 def save_reg_contents(reg):
     symbols = reg_descriptor[reg]
     for symbol in symbols:
         for location in symbol_table[symbol].address_descriptor_mem:
-            print("\tmov "+ str(reg) + "," + str(location))
+            print("\tmov "+ str(location) + "," + str(reg))
         symbol_table[symbol].address_descriptor_reg.remove(reg)
     reg_descriptor[reg].clear()
 
@@ -57,6 +70,9 @@ def get_reg(instr):
                     next_use = n_use
                     R1 = reg
         save_reg_contents(R1)
+
+        if R2 and R1 == R2:
+            R2 = None
 
         reg_descriptor[R1].add(out)
         symbol_table[out].address_descriptor_reg.add(R1)

@@ -4,7 +4,8 @@ from utilities import *
 
 class CodeGenerator:
     def gen_data_section(self):
-        print("section\t.data")
+        print("extern printf\n")
+        print("section\t.data\n")
         print("print_int:\tdb\t\"%d\",10,0")
         for symbol in symbol_table.keys():
             if symbol_table[symbol].array_size != None:
@@ -15,13 +16,24 @@ class CodeGenerator:
     def gen_start_template(self):
         print()
         print("section .text")
-        print("\tglobal _main")
+        print("\tglobal main")
         print("main:")
 
     def gen_exit_template(self):
         print()
         print("\tmov eax,0")
         print("\tret")
+
+    def op_print_int(self, instr):
+        print("push ebp")
+        print("mov ebp,esp")
+        loc = get_best_location(instr.inp1)
+        print("push dword " + str(loc))
+        print("push dword print_int")
+        print("call printf")
+        print("add esp, 8")
+        print("mov esp, ebp")
+        print("pop ebp")
 
     def op_add(self, instr):
         R1, R2, flag = get_reg(instr)
@@ -129,7 +141,12 @@ class CodeGenerator:
             self.op_call_function(instr)
 
         elif instr_type == "library_func":
-            pass
+            self.op_print_int(instr)
+
+
+###################################global generator############################
+generator = CodeGenerator()
+###################################global generator############################
 
 def next_use(leader, IR_code):
     '''
@@ -167,8 +184,7 @@ def next_use(leader, IR_code):
             generator.gen_code(instr)
 
 if __name__ == "__main__":
-    leader, IR_code = read_three_address_code("../test/ex1.csv")
-    generator = CodeGenerator()
+    leader, IR_code = read_three_address_code("../test/2_test.csv")
     generator.gen_data_section()
     generator.gen_start_template()
     next_use(leader, IR_code)
