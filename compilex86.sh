@@ -1,3 +1,3 @@
-nasm -f elf64 $1
+nasm -f elf32 $1
 filename=$(echo $1 | sed 's/.asm$/.o/g')
-ld -s -o a.out $filename
+gcc -m32 $filename
