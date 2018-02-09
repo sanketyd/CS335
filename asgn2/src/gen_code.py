@@ -36,47 +36,45 @@ class CodeGenerator:
         print("\tpop ebp")
 
     def op_add(self, instr):
-        R1, R2, flag = get_reg(instr)
+        R1, flag = get_reg(instr)
         if flag:
-            print("\tmov "+ R1 + ", " + instr.inp1)
-        if R2 == None:
-            R2 = instr.inp2
+            print("\tmov "+ R1 + ", [" + instr.inp1 + "]")
+        R2 = get_best_location(instr.inp2)
         print("\tadd " + R1 + ", " + R2)
 
 
     def op_sub(self, instr):
-        R1, R2, flag = get_reg(instr)
+        R1, flag = get_reg(instr)
         if flag:
-            print("\tmov " + R1 + ", " + instr.inp1)
-        if R2 == None:
-            R2 = instr.inp2
+            print("\tmov "+ R1 + ", [" + instr.inp1 + "]")
+        R2 = get_best_location(instr.inp2)
         print("\tsub " + R1 + ", " + R2)
 
 
     def op_mult(self, instr):
-        R1, R2, flag = get_reg(instr)
+        R1, flag = get_reg(instr)
         if flag:
-            print("\tmov " + R1 + ", " + instr.inp1)
-        if R2 == None:
-            R2 = instr.inp2
+            print("\tmov "+ R1 + ", [" + instr.inp1 + "]")
+        R2 = get_best_location(instr.inp2)
         print("\timul " + R1 + ", " + R2)    ###### Can do bit-shift if multiplier is 2
 
 
     def op_div(self, instr):
-        R1, R2, flag = get_reg(instr)
         save_reg_contents("eax")
         save_reg_contents("edx")
+        R1, R2, flag = get_reg(instr)
         if flag:
-            print("mov eax, " + instr.inp1)
+            print("\tmov eax, " + instr.inp1)
         elif R1 != "eax":
             # if inp1 is in a register other than eax
-            print("mov eax, " + R1)
+            print("\tmov eax, " + R1)
         if R2 == None:
             # use mem address for inp2
-            print("idiv DWORD PTR [" + instr.inp2 + "]")
+            print("\tidiv DWORD PTR [" + instr.inp2 + "]")
         else:
-            print("idiv " + R2)
+            print("\tidiv " + R2)
 
+        #TODO: calling this after get_reg causing problem
         reg_descriptor["eax"].add(instr.out)
         symbol_table[instr.out].address_descriptor_reg.add("eax")
 
@@ -99,18 +97,18 @@ class CodeGenerator:
         symbol_table[instr.out].address_descriptor_reg.add("edx")
 
     def op_assign(self, instr):
-        #R1, R2, flag = get_reg(instr)
         if instr.inp1 not in symbol_table.keys():   #### For excluding x=y assignments, check if inp1 not in symbol_table
-            print("\tmov " + instr.out + ", " + instr.inp1)
+            R1, flag = get_reg(instr, False)
+            R2 = get_best_location(instr.inp1)
+            print("\tmov " + R1 + ", " + R2)
 
     def op_logical(self, instr):
         # Doing same operation for normal and, or, not and bitwise and, or, not.
         # No special instr for normal logical ops.
-        R1, R2, flag = get_reg(instr)
+        R1, flag = get_reg(instr)
         if flag:
-            print("\tmov " + R1 + ", " + instr.inp1)
-        if R2 == None:
-            R2 = instr.inp2
+            print("\tmov "+ R1 + ", [" + instr.inp1 + "]")
+        R2 = get_best_location(instr.inp2)
         def log_op(x):
             return {
                     "&" : "and ",
@@ -148,6 +146,10 @@ class CodeGenerator:
                 self.op_sub(instr)
             elif instr.operation == "*":
                 self.op_mult(instr)
+            elif instr.operation == "/":
+                self.op_div(instr)
+            elif instr.operation == "%":
+                self.op_modulo(instr)
 
         elif instr_type == "logical":
             self.op_logical(instr)
