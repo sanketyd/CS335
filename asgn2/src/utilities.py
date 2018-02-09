@@ -5,9 +5,11 @@ leader_instructions = [
     "ifgoto",
     "ret",
     "label",
-    "call"
+    "call",
+    "print_int"
 ]
 
+main_return_index = -1
 symbol_table = dict()
 reg_descriptor = dict()
 
@@ -49,6 +51,7 @@ class Instruction:
         self.jmp_to_line = None
         self.jmp_to_label = None
         self.per_inst_next_use = dict()
+        self.is_main_return = False
         self.build(statement)
         self.populate_per_inst_next_use()
 
@@ -106,7 +109,7 @@ class Instruction:
 
         elif instr_type == "print":
             # 10, print, variable
-            self.instr_type = "library_func"
+            self.instr_type = "print_int"
             self.inp1, self.array_index_i1 = self.handle_array_notation(statement[-1].strip())
             self.add_to_symbol_table([self.inp1, self.array_index_i1])
 
@@ -121,7 +124,13 @@ class Instruction:
             self.label_name = statement[-1].strip()
 
         elif instr_type == "ret":
+            global main_return_index
+            if main_return_index == -1:
+                main_return_index = self.line_no
+                self.is_main_return = True
             self.instr_type = "return"
+            if len(statement) == 3:
+                self.out = statement[-1].strip()
 
         elif instr_type == "=":
             # 10, =, a, 2
@@ -192,7 +201,7 @@ def read_three_address_code(filename):
             line_no = IR.line_no
             instr_type = IR.instr_type
             if instr_type in leader_instructions:
-                if instr_type != "label":
+                if instr_type != "label" and instr_type != "print_int":
                     line_no += 1
                 leader.add(line_no)
             if instr_type == "ifgoto":

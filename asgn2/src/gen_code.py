@@ -19,11 +19,6 @@ class CodeGenerator:
         print("\tglobal main")
         print("main:")
 
-    def gen_exit_template(self):
-        print()
-        print("\tmov eax,0")
-        print("\tret")
-
     def op_print_int(self, instr):
         print("\tpush ebp")
         print("\tmov ebp,esp")
@@ -60,45 +55,38 @@ class CodeGenerator:
 
 
     def op_div(self, instr):
-        save_reg_contents("eax")
         save_reg_contents("edx")
-        R1, R2, flag = get_reg(instr)
-        if flag:
-            print("\tmov eax, " + instr.inp1)
-        elif R1 != "eax":
-            # if inp1 is in a register other than eax
-            print("\tmov eax, " + R1)
-        if R2 == None:
-            # use mem address for inp2
-            print("\tidiv DWORD PTR [" + instr.inp2 + "]")
+        save_reg_contents("eax")
+        print("\txor edx, edx")
+        print("\tmov eax, " + get_best_location(instr.inp1))
+        if instr.inp2.isdigit():
+            R1, flag = get_reg(instr,exclude=["eax","edx"])
+            print("\tmov " + R1 + ", " + get_best_location(instr.inp2))
+            print("\tidiv " + R1)
         else:
-            print("\tidiv " + R2)
+            print("\tidiv " + get_best_location(instr.inp2))
 
-        #TODO: calling this after get_reg causing problem
         reg_descriptor["eax"].add(instr.out)
         symbol_table[instr.out].address_descriptor_reg.add("eax")
 
     def op_modulo(self, instr):
-        R1, R2, flag = get_reg(instr)
-        save_reg_contents("eax")
         save_reg_contents("edx")
-        if flag:
-            print("mov eax, " + instr.inp1)
-        elif R1 != "eax":
-            # if inp1 is in a register other than eax
-            print("mov eax, " + R1)
-        if R2 == None:
-            # use mem address for inp2
-            print("idiv DWORD PTR [" + instr.inp2 + "]")
+        save_reg_contents("eax")
+        print("\txor edx, edx")
+        print("\tmov eax, " + get_best_location(instr.inp1))
+        if instr.inp2.isdigit():
+            R1, flag = get_reg(instr,exclude=["eax","edx"])
+            print("\tmov " + R1 + ", " + get_best_location(instr.inp2))
+            print("\tidiv " + R1)
         else:
-            print("idiv " + R2)
+            print("\tidiv " + get_best_location(instr.inp2))
 
         reg_descriptor["edx"].add(instr.out)
         symbol_table[instr.out].address_descriptor_reg.add("edx")
 
     def op_assign(self, instr):
         if instr.inp1 not in symbol_table.keys():   #### For excluding x=y assignments, check if inp1 not in symbol_table
-            R1, flag = get_reg(instr, False)
+            R1, flag = get_reg(instr, compulsory=False)
             R2 = get_best_location(instr.inp1)
             print("\tmov " + R1 + ", " + R2)
 
@@ -129,10 +117,16 @@ class CodeGenerator:
         print(instr.label_name + ":")
 
     def op_call_function(self, instr):
-        pass
+        save_context()
+        print("\tcall " + instr.jmp_to_label)
 
     def op_return(self, instr):
-        pass
+        if instr.is_main_return:
+            print("\tmov eax, 0")
+        elif instr.out != None:
+            save_reg_contents("edi")
+            print("\tmov edi, " + get_best_location(instr.out))
+        print("\tret")
 
     def gen_code(self, instr):
         instr_type = instr.instr_type
@@ -169,7 +163,7 @@ class CodeGenerator:
         elif instr_type == "func_call":
             self.op_call_function(instr)
 
-        elif instr_type == "library_func":
+        elif instr_type == "print_int":
             self.op_print_int(instr)
 
 
@@ -211,10 +205,10 @@ def next_use(leader, IR_code):
 
         for instr in basic_block:
             generator.gen_code(instr)
+        save_context()
 
 if __name__ == "__main__":
     leader, IR_code = read_three_address_code("../test/2_test.csv")
     generator.gen_data_section()
     generator.gen_start_template()
     next_use(leader, IR_code)
-    generator.gen_exit_template()
