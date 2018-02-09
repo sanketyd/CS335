@@ -5,7 +5,7 @@ def save_reg_contents(reg):
     symbols = reg_descriptor[reg]
     for symbol in symbols:
         for location in symbol_table[symbol].address_descriptor_mem:
-            print("mov "+ "reg," + str(location))
+            print("\tmov "+ str(reg) + "," + str(location))
         symbol_table[symbol].address_descriptor_reg.remove(reg)
     reg_descriptor[reg].clear()
 
