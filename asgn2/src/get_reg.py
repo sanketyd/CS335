@@ -11,14 +11,14 @@ def get_best_location(symbol):
 def save_context():
     for reg, symbols in reg_descriptor.items():
         for symbol in symbols:
-            print("\tmov " + str(symbol) + "," + str(reg))
+            print("\tmov " + str(symbol) + ", " + str(reg))
 
 
 def save_reg_contents(reg):
     symbols = reg_descriptor[reg]
     for symbol in symbols:
         for location in symbol_table[symbol].address_descriptor_mem:
-            print("\tmov "+ str(location) + "," + str(reg))
+            print("\tmov "+ location + ", " + reg)
         symbol_table[symbol].address_descriptor_reg.remove(reg)
     reg_descriptor[reg].clear()
 
@@ -74,7 +74,8 @@ def get_reg(instr):
         if R2 and R1 == R2:
             R2 = None
 
-        reg_descriptor[R1].add(out)
-        symbol_table[out].address_descriptor_reg.add(R1)
+        if instr.operation != "/" and instr.operation != "%":
+            reg_descriptor[R1].add(out)
+            symbol_table[out].address_descriptor_reg.add(R1)
 
         return R1, R2, True
