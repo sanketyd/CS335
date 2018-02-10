@@ -145,6 +145,7 @@ class Instruction:
         elif instr_type == "=":
             # 10, =, a, 2
             self.instr_type = "assignment"
+            self.operation = "="
             self.inp1, self.array_index_i1 = self.handle_array_notation(statement[-1].strip())
             self.out, self.array_index_o = self.handle_array_notation(statement[2].strip())
             self.add_to_symbol_table([

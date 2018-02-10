@@ -48,7 +48,7 @@ def get_reg(instr, compulsory=True, exclude=[]):
                         ###############
                         reg_descriptor[reg_name].remove(inp1)
                         symbol_table[inp1].address_descriptor_reg.remove(reg_name)
-                        if instr.operation != "/" and instr.operation != "%":
+                        if instr.operation not in ["/", "%", "="]:
                             reg_descriptor[reg_name].add(out)
                             symbol_table[out].address_descriptor_reg.add(reg_name)
                         ##############
@@ -58,7 +58,7 @@ def get_reg(instr, compulsory=True, exclude=[]):
             if key not in exclude:
                 if len(value) == 0:
                     ###############
-                    if instr.operation != "/" and instr.operation != "%":
+                    if instr.operation not in ["/", "%", "="]:
                         reg_descriptor[key].add(out)
                         symbol_table[out].address_descriptor_reg.add(key)
                     ##############
@@ -77,7 +77,7 @@ def get_reg(instr, compulsory=True, exclude=[]):
             save_reg_contents(R1)
 
 
-            if instr.operation != "/" and instr.operation != "%":
+            if instr.operation not in ["/", "%", "="]:
                 reg_descriptor[R1].add(out)
                 symbol_table[out].address_descriptor_reg.add(R1)
 
