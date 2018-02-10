@@ -112,7 +112,17 @@ class Instruction:
             self.instr_type = "print_int"
             self.inp1, self.array_index_i1 = self.handle_array_notation(statement[-1].strip())
             self.add_to_symbol_table([self.inp1, self.array_index_i1])
-
+        elif instr_type in ["~","!","++","--"]:
+            #10, ++, out, variable
+            print(instr_type)
+            self.operation = instr_type
+            self.instr_type = "unary"
+            self.inp1, self.array_index_i1 = self.handle_array_notation(statement[-1].strip())
+            self.out, self.array_index_o = self.handle_array_notation(statement[2].strip())
+            self.add_to_symbol_table([
+                self.inp1, self.array_index_i1,
+                self.out, self.array_index_o
+            ])
         elif instr_type == "call":
             # 10, call, label_name
             self.instr_type = "func_call"
@@ -147,7 +157,7 @@ class Instruction:
             self.inp1, self.array_index_i1 = self.handle_array_notation(statement[-1].strip())
             self.add_to_symbol_table([self.inp1, self.array_index_i1], True)
 
-        elif instr_type in ["|","||","&","&&","~","!"]:
+        elif instr_type in ["|","||","&","&&"]:
             # 10, &&, a, a, b
             self.instr_type = "logical"
             self.inp1, self.array_index_i1 = self.handle_array_notation(statement[3].strip())
