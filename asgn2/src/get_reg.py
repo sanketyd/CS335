@@ -1,20 +1,55 @@
 from utilities import *
 
 #TODO: in function get reg remove outfrom reg_descripto all regs
-def get_best_location(symbol):
+def communitative_opt(instr):
+    if instr.out == instr.inp2:
+        return instr.inp2, instr.inp1
+
+    return instr.inp1, instr.inp2
+
+def update_reg_descriptors(reg,symbol):
+    reg_descriptor[reg].clear()
+    if not is_valid_sym(symbol):
+        return
+    for register in symbol_table[symbol].address_descriptor_reg:
+        if register != reg:
+            reg_descriptor[register].remove(symbol)
+    symbol_table[symbol].address_descriptor_reg.clear()
+    symbol_table[symbol].address_descriptor_reg.add(reg)
+    reg_descriptor[reg].add(symbol)
+
+def free_regs(instr):
+    if is_valid_sym(instr.inp1):
+        if instr.per_inst_next_use[instr.inp1].next_use == None\
+                and instr.per_inst_next_use[instr.inp1].live == False:
+            for register in symbol_table[instr.inp1].address_descriptor_reg:
+                reg_descriptor[register].remove(instr.inp1)
+            symbol_table[instr.inp1].address_descriptor_reg.clear()
+
+    if is_valid_sym(instr.inp2):
+        if instr.per_inst_next_use[instr.inp2].next_use == None\
+                and instr.per_inst_next_use[instr.inp2].live == False:
+            for register in symbol_table[instr.inp2].address_descriptor_reg:
+                reg_descriptor[register].remove(instr.inp2)
+            symbol_table[instr.inp2].address_descriptor_reg.clear()
+
+def get_best_location(symbol,exclude_reg=[]):
     if is_valid_sym(symbol):
-        if len(symbol_table[symbol].address_descriptor_reg):
-            return next(iter(symbol_table[symbol].address_descriptor_reg))
-        else:
-            return "[" + symbol + "]"
+        for reg in symbol_table[symbol].address_descriptor_reg:
+            if reg not in exclude_reg:
+                return reg
+        return "[" + symbol + "]"
     elif symbol:
         return "dword " + symbol
 
 def save_context():
+    saved_symbols = set()
     for reg, symbols in reg_descriptor.items():
         for symbol in symbols:
-            print("\tmov [" + str(symbol) + "], " + str(reg))
-            symbol_table[symbol].address_descriptor_reg.clear()
+            if symbol not in saved_symbols:
+                print("\tmov [" + str(symbol) + "], " + str(reg))
+                symbol_table[symbol].address_descriptor_reg.clear()
+                saved_symbols.add(symbol)
         reg_descriptor[reg].clear()
 
 
@@ -44,24 +79,14 @@ def get_reg(instr, compulsory=True, exclude=[]):
         if is_valid_sym(inp1):
             for reg_name in symbol_table[inp1].address_descriptor_reg:
                 if reg_name not in exclude:
-                    if len(reg_descriptor[reg_name]) == 1 and instr.per_inst_next_use[inp1].next_use == None:
-                        ###############
-                        reg_descriptor[reg_name].remove(inp1)
-                        symbol_table[inp1].address_descriptor_reg.remove(reg_name)
-                        if instr.operation not in ["/", "%", "="]:
-                            reg_descriptor[reg_name].add(out)
-                            symbol_table[out].address_descriptor_reg.add(reg_name)
-                        ##############
+                    if len(reg_descriptor[reg_name]) == 1 \
+                            and instr.per_inst_next_use[inp1].next_use == None\
+                            and not instr.per_inst_next_use[inp1].live:
                         return reg_name, False
 
         for key, value in reg_descriptor.items():
             if key not in exclude:
                 if len(value) == 0:
-                    ###############
-                    if instr.operation not in ["/", "%", "="]:
-                        reg_descriptor[key].add(out)
-                        symbol_table[out].address_descriptor_reg.add(key)
-                    ##############
                     return key, True
 
         if compulsory or per_inst_next_use[out].next_use:
@@ -75,12 +100,6 @@ def get_reg(instr, compulsory=True, exclude=[]):
                             next_use = n_use
                             R1 = reg
             save_reg_contents(R1)
-
-
-            if instr.operation not in ["/", "%", "="]:
-                reg_descriptor[R1].add(out)
-                symbol_table[out].address_descriptor_reg.add(R1)
-
             return R1, True
 
         else:

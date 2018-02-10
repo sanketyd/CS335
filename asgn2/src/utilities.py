@@ -28,7 +28,7 @@ def is_valid_sym(symbol):
 class SymbolTableEntry:
     def __init__(self):
         self.value = None
-        self.live = False
+        self.live = True
         self.next_use = None
         self.array_size = None
         self.address_descriptor_mem = set()
@@ -196,6 +196,7 @@ def read_three_address_code(filename):
     IR_code = []
     with open(filename, 'r') as csvfile:
         instruction_set = csv.reader(csvfile, delimiter=',')
+        index_label_to_be_added = set()
         for statement in instruction_set:
             IR = Instruction(statement)
             IR_code.append(IR)
@@ -210,7 +211,15 @@ def read_three_address_code(filename):
                 if goto_line.isdigit():
                     goto_line = int(goto_line)
                     leader.add(goto_line)
-                    IR_code[goto_line - 1].label_to_be_added = True
+                    index_label_to_be_added.add(goto_line - 1)
+                    # IR_code[goto_line - 1].label_to_be_added = True
+        for index in index_label_to_be_added:
+            IR_code[index].label_to_be_added = True
     leader.add(len(IR_code)+1)
 
     return (sorted(leader), IR_code)
+
+def reset_live_and_next_use():
+    for symbol in symbol_table.keys():
+        symbol_table[symbol].live = True
+        symbol_table[symbol].next_use = None
