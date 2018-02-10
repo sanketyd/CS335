@@ -33,7 +33,7 @@ class CodeGenerator:
     def op_add(self, instr):
         R1, flag = get_reg(instr)
         if flag:
-            print("\tmov "+ R1 + ", [" + instr.inp1 + "]")
+            print("\tmov "+ R1 + ", " + get_best_location(instr.inp1))
         R2 = get_best_location(instr.inp2)
         print("\tadd " + R1 + ", " + R2)
 
@@ -55,16 +55,17 @@ class CodeGenerator:
 
 
     def op_div(self, instr):
+        #1 thing that can be done is if inp1 is in eax then move it from reg so mov this after mov R1, eax
         save_reg_contents("edx")
         save_reg_contents("eax")
-        print("\txor edx, edx")
         print("\tmov eax, " + get_best_location(instr.inp1))
+        print("\txor edx, edx")
         if instr.inp2.isdigit():
             R1, flag = get_reg(instr,exclude=["eax","edx"])
             print("\tmov " + R1 + ", " + get_best_location(instr.inp2))
             print("\tidiv " + R1)
         else:
-            print("\tidiv " + get_best_location(instr.inp2))
+            print("\tidiv dword " + get_best_location(instr.inp2))
 
         reg_descriptor["eax"].add(instr.out)
         symbol_table[instr.out].address_descriptor_reg.add("eax")
@@ -85,10 +86,65 @@ class CodeGenerator:
         symbol_table[instr.out].address_descriptor_reg.add("edx")
 
     def op_assign(self, instr):
-        if instr.inp1 not in symbol_table.keys():   #### For excluding x=y assignments, check if inp1 not in symbol_table
+        #TODO: Handle cases when index or inp1 is integer
+        if instr.array_index_i1 == None and instr.array_index_o == None and instr.inp1.isdigit():
             R1, flag = get_reg(instr, compulsory=False)
-            R2 = get_best_location(instr.inp1)
-            print("\tmov " + R1 + ", " + R2)
+            print("\tmov " + R1 + ", " + get_best_location(instr.inp1))
+            reg_descriptor[R1].add(instr.out)
+            symbol_table[instr.out].address_descriptor_reg.add(R1)
+
+        elif instr.array_index_i1 == None and instr.array_index_o == None:
+            if len(symbol_table[instr.inp1].address_descriptor_reg) == 0:
+                R1, flag = get_reg(instr)
+                print("\tmov " + R1 +", " + get_best_location(instr.inp1))
+                symbol_table[instr.inp1].address_descriptor_reg.add(R1)
+                reg_descriptor[R1].add(instr.inp1)
+
+            if len(symbol_table[instr.inp1].address_descriptor_reg):
+                for regs in symbol_table[instr.out].address_descriptor_reg:
+                    reg_descriptor[regs].remove(instr.out)
+                symbol_table[instr.out].address_descriptor_reg.clear()
+                symbol_table[instr.out].address_descriptor_reg = symbol_table[instr.inp1].address_descriptor_reg.copy()
+
+                for reg in symbol_table[instr.out].address_descriptor_reg:
+                    reg_descriptor[reg].add(instr.out)
+
+                if instr.per_inst_next_use[instr.inp1].next_use == None:
+                    print("\tmov [" + instr.inp1 + "], " + next(iter(symbol_table[instr.inp1].address_descriptor_reg)))
+                    for reg in symbol_table[instr.inp1].address_descriptor_reg:
+                        reg_descriptor[reg].remove(instr.inp1)
+                    symbol_table[instr.inp1].address_descriptor_reg.clear()
+
+        elif instr.array_index_i1 != None:
+            for x in symbol_table[instr.inp1].address_descriptor_reg:
+                print(x)
+            assert len(symbol_table[instr.inp1].address_descriptor_reg) == 0
+            R1, flag = get_reg(instr)
+            print("\tmov " + R1 + ", " +get_best_location(instr.array_index_i1))
+            print("\tshl " + R1 + ", 2")
+            print("\tadd " + R1 + ", " + instr.inp1)
+            print("\tmov " + R1 + ", [" + R1 + "]")
+            symbol_table[instr.out].address_descriptor_reg.add(R1)
+            reg_descriptor[R1].add(instr.out)
+
+        else:
+            index = instr.array_index_o
+            R1 = None
+            if len(symbol_table[index].address_descriptor_reg) == 0:
+                R1, _ = get_reg(instr)
+                print("\tmov " + R1 + ", " + get_best_location(index))
+            else:
+                R1 = get_best_location(index)
+            inp_reg, flag = get_reg(instr, exclude=[R1])
+            if flag:
+                print("\tmov " + inp_reg + ", " + get_best_location(instr.inp1))
+            print("\tmov [" + instr.out + "," + R1 + "*4], " + inp_reg)
+            if is_valid_sym(index):
+                symbol_table[index].address_descriptor_reg.add(R1)
+                reg_descriptor[R1].add(index)
+            if is_valid_sym(instr.inp1):
+                symbol_table[instr.inp1].address_descriptor_reg.add(inp_reg)
+                reg_descriptor[inp_reg].add(instr.inp1)
 
     def op_logical(self, instr):
         # Doing same operation for normal and, or, not and bitwise and, or, not.
@@ -111,7 +167,63 @@ class CodeGenerator:
             print("\tnot " + R1)
 
     def op_ifgoto(self, instr):
-        pass
+        inp1 = instr.inp1
+        inp2 = instr.inp2
+        out = None
+        jmp_label = None
+        if instr.jmp_to_line != None:
+            jmp_label = "line_no_" + str(instr.jmp_to_line)
+        else:
+            jmp_label = instr.jmp_to_label
+
+        operator = instr.operation
+        if inp1.isdigit() and inp2.isdigit():
+            if operator == "geq":
+                if inp1 >= inp2:
+                    print("\tjmp " + jmp_label)
+            elif operator == "gt":
+                if inp1 > inp2:
+                    print("\tjmp " + jmp_label)
+            elif operator == "leq":
+                if inp1 <= inp2:
+                    print("\tjmp " + jmp_label)
+            elif operator == "lt":
+                if inp1 < inp2:
+                    print("\tjmp " + jmp_label)
+            elif operator == "eq":
+                if inp1 == inp2:
+                    print("\tjmp " + jmp_label)
+            elif operator == "neq":
+                if inp1 != inp2:
+                    print("\tjmp " + jmp_label)
+            return
+
+        R1 = get_best_location(inp1)
+        R2 = get_best_location(inp2)
+        if R1 in reg_descriptor.keys():
+            print("\tcmp " + R1 + ", " + R2)
+        elif R2 in reg_descriptor.keys():
+            print("\tcmp " + R1 + ", " + R2)
+        else:
+            instr.out = inp1
+            instr.inp1 = None
+            R, flag = get_reg(instr)
+            print("\tmov " + R + ", " + R1)
+            print("\tcmp " + R + ", " + R2)
+
+        if operator == "geq":
+            print("\tjge " + jmp_label)
+        elif operator == "gt":
+            print("\tjg " + jmp_label)
+        elif operator == "leq":
+            print("\tjle " + jmp_label)
+        elif operator == "lt":
+            print("\tjl " + jmp_label)
+        elif operator == "eq":
+            print("\tje " + jmp_label)
+        elif operator == "neq":
+            print("\tjne " + jmp_label)
+
 
     def op_label(self, instr):
         print(instr.label_name + ":")
@@ -124,14 +236,14 @@ class CodeGenerator:
         if instr.is_main_return:
             print("\tmov eax, 0")
         elif instr.out != None:
-            save_reg_contents("edi")
-            print("\tmov edi, " + get_best_location(instr.out))
+            save_reg_contents("eax")
+            print("\tmov eax, " + get_best_location(instr.out))
         print("\tret")
 
     def gen_code(self, instr):
         instr_type = instr.instr_type
         if instr.label_to_be_added == True:
-            print("label_" + str(instr.line_no) + ":")
+            print("line_no_" + str(instr.line_no) + ":")
 
         if instr_type == "arithmetic":
             if instr.operation == "+":
@@ -208,7 +320,7 @@ def next_use(leader, IR_code):
         save_context()
 
 if __name__ == "__main__":
-    leader, IR_code = read_three_address_code("../test/2_test.csv")
+    leader, IR_code = read_three_address_code("../test/ex1.csv")
     generator.gen_data_section()
     generator.gen_start_template()
     next_use(leader, IR_code)
