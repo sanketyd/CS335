@@ -171,6 +171,17 @@ class CodeGenerator:
         else:
             print("\tnot " + R1)
 
+    def op_unary(self, instr):
+        R1, flag = get_reg(instr)
+        if flag:
+            print("\tmov "+ R1 + ", [" + instr.inp1 + "]")
+        if instr.operation == "!" or instr.operation == "~":
+            print("\tnot "+ R1)
+        elif instr.operation == "++":
+            print("\tinc "+ R1)
+        elif instr.operation == "--":
+            print("\tdec "+ R1)
+
     def op_ifgoto(self, instr):
         inp1 = instr.inp1
         inp2 = instr.inp2
@@ -288,6 +299,8 @@ class CodeGenerator:
         elif instr_type == "print_int":
             self.op_print_int(instr)
 
+        elif instr_type == "unary":
+            self.op_unary(instr)
 
 ###################################global generator############################
 generator = CodeGenerator()
