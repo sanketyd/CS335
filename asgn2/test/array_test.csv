@@ -1,0 +1,6 @@
+1,decl_array,a[10]
+2,=,i,4
+3,=,a[i],69
+4,=,j,a[i]
+5,print,j
+6,ret
