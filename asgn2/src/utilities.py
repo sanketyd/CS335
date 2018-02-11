@@ -26,8 +26,13 @@ def reset_live_and_next_use():
         symbol_table[symbol].live = True
         symbol_table[symbol].next_use = None
 
+def is_valid_number(symbol):
+    if symbol[0] == "-":
+        return True
+    return symbol.isdigit()
+
 def is_valid_sym(symbol):
-    if symbol != None and not symbol.isdigit():
+    if symbol != None and not is_valid_number(symbol):
         return True
     return False
 
@@ -71,6 +76,9 @@ class Instruction:
                         symbol_table[symbol] = SymbolTableEntry()
                         symbol_table[symbol].address_descriptor_mem.add(symbol)
         else:
+            # an array is declared: arr[100]
+            # store 'symbols[0]` in symbol table if not already present
+            # set size  of array to `symbols[1]`
             if is_valid_sym(symbols[0]):
                 if symbols[0] not in symbol_table.keys():
                     symbol_table[symbols[0]] = SymbolTableEntry()
@@ -179,7 +187,7 @@ class Instruction:
             ])
 
         elif instr_type == "decl_array":
-            self.instr_type = "array_declarition"
+            self.instr_type = "array_declaration"
             self.inp1, self.array_index_i1 = self.handle_array_notation(statement[-1].strip())
             self.add_to_symbol_table([self.inp1, self.array_index_i1], True)
 

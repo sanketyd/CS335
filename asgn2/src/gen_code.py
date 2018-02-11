@@ -69,7 +69,7 @@ class CodeGenerator:
         if flag:
             print("\tmov "+ R1 + ", " + get_best_location(instr.inp1))
         flag = False        # to avoid multiple operations
-        if instr.inp2.isdigit():
+        if is_valid_number(instr.inp2):
             if instr.inp2 == "2":
                 print("\tshl " + R1 + ", 1")
                 flag = True
@@ -89,7 +89,7 @@ class CodeGenerator:
         save_reg_contents("eax")
         print("\tmov eax, " + get_best_location(instr.inp1))
         print("\txor edx, edx")
-        if instr.inp2.isdigit():
+        if is_valid_number(instr.inp2):
             R1, flag = get_reg(instr,exclude=["eax","edx"])
             print("\tmov " + R1 + ", " + get_best_location(instr.inp2))
             print("\tidiv " + R1)
@@ -104,7 +104,7 @@ class CodeGenerator:
         save_reg_contents("eax")
         print("\txor edx, edx")
         print("\tmov eax, " + get_best_location(instr.inp1))
-        if instr.inp2.isdigit():
+        if is_valid_number(instr.inp2):
             R1, flag = get_reg(instr,exclude=["eax","edx"])
             print("\tmov " + R1 + ", " + get_best_location(instr.inp2))
             print("\tidiv " + R1)
@@ -136,7 +136,7 @@ class CodeGenerator:
 
 
     def op_assign(self, instr):
-        if instr.array_index_i1 == None and instr.array_index_o == None and instr.inp1.isdigit():
+        if instr.array_index_i1 == None and instr.array_index_o == None and is_valid_number(instr.inp1):
             R1, flag = get_reg(instr, compulsory=False)
             print("\tmov " + R1 + ", " + get_best_location(instr.inp1))
             if R1 in reg_descriptor.keys():
@@ -244,7 +244,7 @@ class CodeGenerator:
             jmp_label = instr.jmp_to_label
 
         operator = instr.operation
-        if inp1.isdigit() and inp2.isdigit():
+        if is_valid_number(instr.inp1) and is_valid_number(instr.inp2):
             save_context()
             if operator == "geq":
                 if inp1 >= inp2:
@@ -435,3 +435,7 @@ if __name__ == "__main__":
     generator.gen_data_section()
     generator.gen_start_template()
     next_use(leader, IR_code)
+
+    # DEBUGGING
+    # for symbol in symbol_table:
+        # print(symbol)
