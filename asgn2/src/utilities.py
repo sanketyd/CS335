@@ -6,19 +6,20 @@ leader_instructions = [
     "ret",
     "label",
     "call",
-    "print_int"
+    "print_int",
+    "scan_int"
 ]
 
 main_return_index = -1
 symbol_table = dict()
 reg_descriptor = dict()
 
-reg_descriptor["eax"] = set()
 reg_descriptor["ebx"] = set()
 reg_descriptor["ecx"] = set()
-reg_descriptor["edx"] = set()
 reg_descriptor["esi"] = set()
 reg_descriptor["edi"] = set()
+reg_descriptor["edx"] = set()
+reg_descriptor["eax"] = set()
 
 def reset_live_and_next_use():
     for symbol in symbol_table.keys():
@@ -119,6 +120,13 @@ class Instruction:
             self.instr_type = "print_int"
             self.inp1, self.array_index_i1 = self.handle_array_notation(statement[-1].strip())
             self.add_to_symbol_table([self.inp1, self.array_index_i1])
+
+        elif instr_type == "input":
+            # 10, input, variable
+            self.instr_type = "scan_int"
+            self.inp1, self.array_index_i1 = self.handle_array_notation(statement[-1].strip())
+            self.add_to_symbol_table([self.inp1, self.array_index_i1])
+
         elif instr_type in ["~","!","++","--"]:
             #10, ++, out, variable
             print(instr_type)
@@ -132,8 +140,15 @@ class Instruction:
             ])
         elif instr_type == "call":
             # 10, call, label_name
+            # OR
+            # 10, call, label_name, optional_return
             self.instr_type = "func_call"
-            self.jmp_to_label = statement[-1].strip()
+            if len(statement) == 3:
+                self.jmp_to_label = statement[-1].strip()
+            else:
+                self.jmp_to_label = statement[2].strip()
+                self.out = statement[-1].strip()
+                self.add_to_symbol_table(self.out)
 
         elif instr_type == "label":
             # 10, label, label_name
@@ -165,7 +180,7 @@ class Instruction:
             self.inp1, self.array_index_i1 = self.handle_array_notation(statement[-1].strip())
             self.add_to_symbol_table([self.inp1, self.array_index_i1], True)
 
-        elif instr_type in ["|", "||", "&", "&&", "^", "~", "!"]
+        elif instr_type in ["|", "||", "&", "&&", "^", "~", "!"]:
             # 10, &&, a, a, b
             self.instr_type = "logical"
             self.inp1, self.array_index_i1 = self.handle_array_notation(statement[3].strip())

@@ -6,8 +6,10 @@ from utilities import *
 class CodeGenerator:
     def gen_data_section(self):
         print("extern printf\n")
+        print("extern scanf\n")
         print("section\t.data\n")
         print("print_int:\tdb\t\"%d\",10,0")
+        print("scan_int:\tdb\t\"%d\",0")
         for symbol in symbol_table.keys():
             if symbol_table[symbol].array_size != None:
                 print(str(symbol) + "\ttimes\t" + str(symbol_table[symbol].array_size) + "\tdd\t0")
@@ -27,6 +29,17 @@ class CodeGenerator:
         print("\tpush dword " + str(loc))
         print("\tpush dword print_int")
         print("\tcall printf")
+        print("\tadd esp, 8")
+        print("\tmov esp, ebp")
+        print("\tpop ebp")
+
+    def op_scan_int(self, instr):
+        print("\tpush ebp")
+        print("\tmov ebp,esp")
+        loc = get_best_location(instr.inp1)
+        print("\tpush " + instr.inp1)
+        print("\tpush scan_int")
+        print("\tcall scanf")
         print("\tadd esp, 8")
         print("\tmov esp, ebp")
         print("\tpop ebp")
@@ -285,6 +298,8 @@ class CodeGenerator:
     def op_call_function(self, instr):
         save_context()
         print("\tcall " + instr.jmp_to_label)
+        if instr.out != None:
+            update_reg_descriptors("eax",instr.out)
 
     def op_return(self, instr):
         if instr.is_main_return:
@@ -316,7 +331,7 @@ class CodeGenerator:
                 self.op_modulo(instr)
             elif instr.operation == "<<":
                 self.op_lshift(instr)
-            elif instr.operation == ">>"
+            elif instr.operation == ">>":
                 self.op_rshift(instr)
 
         elif instr_type == "logical":
@@ -339,6 +354,9 @@ class CodeGenerator:
 
         elif instr_type == "print_int":
             self.op_print_int(instr)
+
+        elif instr_type == "scan_int":
+            self.op_scan_int(instr)
 
         elif instr_type == "unary":
             self.op_unary(instr)
