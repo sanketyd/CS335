@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import sys
+from math import log
 from get_reg import *
 from utilities import *
 
@@ -44,7 +45,36 @@ class CodeGenerator:
         print("\tmov esp, ebp")
         print("\tpop ebp")
 
+    def optimize_if_possible(self, out, inp1, inp2, op):
+        '''
+        If both inputs are integers; compute them beforehand
+        '''
+        if is_valid_number(inp1) and is_valid_number(inp2):
+            inp1 = int(inp1)
+            inp2 = int(inp2)
+            if op == "+":
+                res = inp1 + inp2
+            elif op == "-":
+                res = inp1 - inp2
+            elif op == "*":
+                res = inp1 * inp2
+            elif op == "/":
+                res = inp1 / inp2
+            elif op == "%":
+                res = inp1 % inp2
+            elif op == "<<":
+                res = inp1 << inp2
+            elif op == ">>":
+                res = inp1 >> inp2
+            res = int(res)
+            print("\tmov " + get_best_location(out) + ", " + get_best_location(str(res)))
+            return True
+        return False
+
     def op_add(self, instr):
+        optimized = self.optimize_if_possible(instr.out, instr.inp1, instr.inp2, instr.operation)
+        if optimized:
+            return
         R1, flag = get_reg(instr)
         if flag:
             print("\tmov "+ R1 + ", " + get_best_location(instr.inp1))
@@ -55,6 +85,9 @@ class CodeGenerator:
 
 
     def op_sub(self, instr):
+        optimized = self.optimize_if_possible(instr.out, instr.inp1, instr.inp2, instr.operation)
+        if optimized:
+            return
         R1, flag = get_reg(instr)
         if flag:
             print("\tmov "+ R1 + ", " + get_best_location(instr.inp1))
@@ -65,18 +98,22 @@ class CodeGenerator:
 
 
     def op_mult(self, instr):
+        optimized = self.optimize_if_possible(instr.out, instr.inp1, instr.inp2, instr.operation)
+        if optimized:
+            return
         R1, flag = get_reg(instr)
         if flag:
             print("\tmov "+ R1 + ", " + get_best_location(instr.inp1))
-        flag = False        # to avoid multiple operations
+        # handle cases when inp2 is a power of 2
+        bitshift = False        # to avoid multiple operations
         if is_valid_number(instr.inp2):
-            if instr.inp2 == "2":
-                print("\tshl " + R1 + ", 1")
-                flag = True
-            elif instr.inp2 == "4":
-                print("\tshl " + R1 + ", 2")
-                flag = True
-        if not flag:
+            num = int(instr.inp2)
+            if num & (num - 1) == 0 and num != 0:
+                # use bitshift
+                power = int(log(instr.inp2))
+                print("\tshl " + R1 + ", " + str(power))
+                bitshift = False
+        if not bitshift:
             R2 = get_best_location(instr.inp2)
             print("\timul " + R1 + ", " + R2)
         update_reg_descriptors(R1, instr.out)
@@ -84,7 +121,9 @@ class CodeGenerator:
 
 
     def op_div(self, instr):
-        #1 thing that can be done is if inp1 is in eax then move it from reg so mov this after mov R1, eax
+        optimized = self.optimize_if_possible(instr.out, instr.inp1, instr.inp2, instr.operation)
+        if optimized:
+            return
         save_reg_contents("edx")
         save_reg_contents("eax")
         print("\tmov eax, " + get_best_location(instr.inp1))
@@ -101,6 +140,9 @@ class CodeGenerator:
 
 
     def op_modulo(self, instr):
+        optimized = self.optimize_if_possible(instr.out, instr.inp1, instr.inp2, instr.operation)
+        if optimized:
+            return
         save_reg_contents("edx")
         save_reg_contents("eax")
         print("\tmov eax, " + get_best_location(instr.inp1))
@@ -118,6 +160,9 @@ class CodeGenerator:
 
 
     def op_lshift(self, instr):
+        optimized = self.optimize_if_possible(instr.out, instr.inp1, instr.inp2, instr.operation)
+        if optimized:
+            return
         R1, flag = get_reg(instr)
         if flag:
             print("\tmov "+ R1 + ", " + get_best_location(instr.inp1))
@@ -128,6 +173,9 @@ class CodeGenerator:
 
 
     def op_rshift(self, instr):
+        optimized = self.optimize_if_possible(instr.out, instr.inp1, instr.inp2, instr.operation)
+        if optimized:
+            return
         R1, flag = get_reg(instr)
         if flag:
             print("\tmov "+ R1 + ", " + get_best_location(instr.inp1))
