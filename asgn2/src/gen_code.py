@@ -199,7 +199,7 @@ class CodeGenerator:
         # TODO: logical &&, ||
         R1, flag = get_reg(instr)
         if flag:
-            print("\tmov "+ R1 + ", [" + instr.inp1 + "]")
+            print("\tmov "+ R1 + ", " + get_best_location(instr.inp1))
         R2 = get_best_location(instr.inp2)
         def log_op(x):
             return {
@@ -315,10 +315,9 @@ class CodeGenerator:
             update_reg_descriptors("eax",instr.out)
 
     def op_return(self, instr):
-        if instr.is_main_return:
-            print("\tmov eax, 0")
-        elif instr.out != None:
-            save_reg_contents("eax")
+        if instr.out != None:
+            save_context()
+            # save_reg_contents("eax")
             print("\tmov eax, " + get_best_location(instr.out))
         print("\tret")
 
