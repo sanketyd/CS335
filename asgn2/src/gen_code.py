@@ -88,12 +88,13 @@ class CodeGenerator:
         save_reg_contents("edx")
         save_reg_contents("eax")
         print("\tmov eax, " + get_best_location(instr.inp1))
-        print("\txor edx, edx")
         if is_valid_number(instr.inp2):
             R1, flag = get_reg(instr,exclude=["eax","edx"])
             print("\tmov " + R1 + ", " + get_best_location(instr.inp2))
+            print("\tcdq")
             print("\tidiv " + R1)
         else:
+            print("\tcdq")
             print("\tidiv dword " + get_best_location(instr.inp2))
         update_reg_descriptors("eax", instr.out)
         free_regs(instr)
@@ -102,13 +103,13 @@ class CodeGenerator:
     def op_modulo(self, instr):
         save_reg_contents("edx")
         save_reg_contents("eax")
-        print("\txor edx, edx")
         print("\tmov eax, " + get_best_location(instr.inp1))
         if is_valid_number(instr.inp2):
             R1, flag = get_reg(instr,exclude=["eax","edx"])
             print("\tmov " + R1 + ", " + get_best_location(instr.inp2))
             print("\tidiv " + R1)
         else:
+            print("\tcdq")
             print("\tidiv dword" + get_best_location(instr.inp2))
 
         update_reg_descriptors("edx", instr.out)
@@ -218,7 +219,7 @@ class CodeGenerator:
         free_regs(instr)
 
     def op_unary(self, instr):
-        R1, flag = get_reg(instr)
+        R1, flag = get_reg(instr,compulsory=False)
         if R1 not in reg_descriptor.keys():
             R1 = "dword " + R1
         if flag:
