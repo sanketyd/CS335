@@ -218,7 +218,7 @@ class CodeGenerator:
         free_regs(instr)
 
     def op_unary(self, instr):
-        R1, flag = get_reg(instr,compulsory=False)
+        R1, flag = get_reg(instr)
         if R1 not in reg_descriptor.keys():
             R1 = "dword " + R1
         if flag:
