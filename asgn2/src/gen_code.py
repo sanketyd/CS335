@@ -96,7 +96,8 @@ class CodeGenerator:
         if instr.array_index_i1 == None and instr.array_index_o == None and instr.inp1.isdigit():
             R1, flag = get_reg(instr, compulsory=False)
             print("\tmov " + R1 + ", " + get_best_location(instr.inp1))
-            update_reg_descriptors(R1, instr.out)
+            if R1 in reg_descriptor.keys():
+                update_reg_descriptors(R1, instr.out)
 
         elif instr.array_index_i1 == None and instr.array_index_o == None:
             if len(symbol_table[instr.inp1].address_descriptor_reg) == 0:
@@ -174,13 +175,15 @@ class CodeGenerator:
     def op_unary(self, instr):
         R1, flag = get_reg(instr)
         if flag:
-            print("\tmov "+ R1 + ", [" + instr.inp1 + "]")
+            print("\tmov "+ R1 + ", " + get_best_location(instr.inp1))
         if instr.operation == "!" or instr.operation == "~":
             print("\tnot "+ R1)
         elif instr.operation == "++":
             print("\tinc "+ R1)
         elif instr.operation == "--":
             print("\tdec "+ R1)
+        update_reg_descriptors(R1,instr.out)
+        free_regs(instr)
 
     def op_ifgoto(self, instr):
         inp1 = instr.inp1
