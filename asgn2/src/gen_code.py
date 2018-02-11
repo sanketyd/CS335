@@ -55,9 +55,18 @@ class CodeGenerator:
         R1, flag = get_reg(instr)
         if flag:
             print("\tmov "+ R1 + ", " + get_best_location(instr.inp1))
-        R2 = get_best_location(instr.inp2)
-        print("\timul " + R1 + ", " + R2)    ###### Can do bit-shift if multiplier is 2
-        update_reg_descriptors(R1,instr.out)
+        flag = False        # to avoid multiple operations
+        if instr.inp2.isdigit():
+            if instr.inp2 == "2":
+                print("\tshl " + R1 + ", 1")
+                flag = True
+            elif instr.inp2 == "4":
+                print("\tshl " + R1 + ", 2")
+                flag = True
+        if not flag:
+            R2 = get_best_location(instr.inp2)
+            print("\timul " + R1 + ", " + R2)
+        update_reg_descriptors(R1, instr.out)
         free_regs(instr)
 
 
@@ -76,6 +85,7 @@ class CodeGenerator:
         update_reg_descriptors("eax", instr.out)
         free_regs(instr)
 
+
     def op_modulo(self, instr):
         save_reg_contents("edx")
         save_reg_contents("eax")
@@ -91,8 +101,28 @@ class CodeGenerator:
         update_reg_descriptors("edx", instr.out)
         free_regs(instr)
 
+
+    def op_lshift(self, instr):
+        R1, flag = get_reg(instr)
+        if flag:
+            print("\tmov "+ R1 + ", " + get_best_location(instr.inp1))
+        R2 = get_best_location(instr.inp2)
+        print("\tshl " + R1 + ", " + R2)
+        update_reg_descriptors(R1, instr.out)
+        free_regs(instr)
+
+
+    def op_rshift(self, instr):
+        R1, flag = get_reg(instr)
+        if flag:
+            print("\tmov "+ R1 + ", " + get_best_location(instr.inp1))
+        R2 = get_best_location(instr.inp2)
+        print("\tshr " + R1 + ", " + R2)
+        update_reg_descriptors(R1, instr.out)
+        free_regs(instr)
+
+
     def op_assign(self, instr):
-        #TODO: Handle cases when index or inp1 is integer
         if instr.array_index_i1 == None and instr.array_index_o == None and instr.inp1.isdigit():
             R1, flag = get_reg(instr, compulsory=False)
             print("\tmov " + R1 + ", " + get_best_location(instr.inp1))
@@ -119,11 +149,11 @@ class CodeGenerator:
         elif instr.array_index_i1 != None:
             assert len(symbol_table[instr.inp1].address_descriptor_reg) == 0
             R1, flag = get_reg(instr)
-            print("\tmov " + R1 + ", " +get_best_location(instr.array_index_i1))
+            print("\tmov " + R1 + ", " + get_best_location(instr.array_index_i1))
             print("\tshl " + R1 + ", 2")
             print("\tadd " + R1 + ", " + instr.inp1)
             print("\tmov " + R1 + ", [" + R1 + "]")
-            update_reg_descriptors(R1,instr.out)
+            update_reg_descriptors(R1, instr.out)
 
         else:
             index = instr.array_index_o
@@ -153,8 +183,7 @@ class CodeGenerator:
 
 
     def op_logical(self, instr):
-        # Doing same operation for normal and, or, not and bitwise and, or, not.
-        # No special instr for normal logical ops.
+        # TODO: logical &&, ||
         R1, flag = get_reg(instr)
         if flag:
             print("\tmov "+ R1 + ", [" + instr.inp1 + "]")
@@ -164,6 +193,7 @@ class CodeGenerator:
                     "&" : "and ",
                     "|" : "or ",
                     "^" : "xor ",
+                    # remove the following 2 lines after TODO
                     "&&": "and ",
                     "||": "or ",
             }[x]
@@ -245,7 +275,7 @@ class CodeGenerator:
             print("\tje " + jmp_label)
         elif operator == "neq":
             print("\tjne " + jmp_label)
-        
+
         free_regs(instr)
 
 
@@ -265,6 +295,10 @@ class CodeGenerator:
         print("\tret")
 
     def gen_code(self, instr):
+        '''
+        Main function which calls other utility functions
+        according to instruction type
+        '''
         instr_type = instr.instr_type
         if instr.label_to_be_added == True:
             print("line_no_" + str(instr.line_no) + ":")
@@ -280,6 +314,10 @@ class CodeGenerator:
                 self.op_div(instr)
             elif instr.operation == "%":
                 self.op_modulo(instr)
+            elif instr.operation == "<<":
+                self.op_lshift(instr)
+            elif instr.operation == ">>"
+                self.op_rshift(instr)
 
         elif instr_type == "logical":
             self.op_logical(instr)
@@ -312,12 +350,19 @@ generator = CodeGenerator()
 def next_use(leader, IR_code):
     '''
     This function determines liveness and next
-    use information for each statement in basic block
+    use information for each statement in basic block by
+    performing a backward pass
 
-    Input: first line number of basic block
+    Then, it generates assembly code for each basic block
+    by making a forward pass
+
+    Finally, it saves all register contents into memory and
+    resets the liveness and next use info in symbol table.
+
     '''
     generator = CodeGenerator()
     for b_start in range(len(leader) -  1):
+        # iterate through all basic blocks
         basic_block = IR_code[leader[b_start] - 1:leader[b_start + 1] - 1]
         # for x in basic_block:
             # print(x.line_no)

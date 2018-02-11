@@ -20,6 +20,11 @@ reg_descriptor["edx"] = set()
 reg_descriptor["esi"] = set()
 reg_descriptor["edi"] = set()
 
+def reset_live_and_next_use():
+    for symbol in symbol_table.keys():
+        symbol_table[symbol].live = True
+        symbol_table[symbol].next_use = None
+
 def is_valid_sym(symbol):
     if symbol != None and not symbol.isdigit():
         return True
@@ -27,7 +32,7 @@ def is_valid_sym(symbol):
 
 class SymbolTableEntry:
     def __init__(self):
-        self.value = None
+        # self.value = None
         self.live = True
         self.next_use = None
         self.array_size = None
@@ -86,8 +91,10 @@ class Instruction:
 
 
     def build(self, statement):
-        # analyse the statement and split it
-        # add to symbol table
+        '''
+        Populate appropriate entries of Instruction class
+        according to instruction type
+        '''
         instr_type = statement[1].strip()
         if instr_type == "ifgoto":
             # 10, ifgoto, leq, a, 50, 2
@@ -158,7 +165,7 @@ class Instruction:
             self.inp1, self.array_index_i1 = self.handle_array_notation(statement[-1].strip())
             self.add_to_symbol_table([self.inp1, self.array_index_i1], True)
 
-        elif instr_type in ["|","||","&","&&"]:
+        elif instr_type in ["|", "||", "&", "&&", "^", "~", "!"]
             # 10, &&, a, a, b
             self.instr_type = "logical"
             self.inp1, self.array_index_i1 = self.handle_array_notation(statement[3].strip())
@@ -186,6 +193,10 @@ class Instruction:
 
 
     def populate_per_inst_next_use(self):
+        '''
+        for each symbol in instruction, initialize the next use
+        and liveness parameters
+        '''
         symbols = [
                 self.inp1, self.array_index_i1,
                 self.inp2, self.array_index_i2,
@@ -199,7 +210,8 @@ class Instruction:
 def read_three_address_code(filename):
     '''
     Given a csv file `filename`, read the file
-    and find the basic blocks
+    and find the basic blocks. Also store each instruction
+    as an instance of Instruction class in a list `IR_code`
     '''
     leader = set()
     leader.add(1)
@@ -228,8 +240,3 @@ def read_three_address_code(filename):
     leader.add(len(IR_code)+1)
 
     return (sorted(leader), IR_code)
-
-def reset_live_and_next_use():
-    for symbol in symbol_table.keys():
-        symbol_table[symbol].live = True
-        symbol_table[symbol].next_use = None
