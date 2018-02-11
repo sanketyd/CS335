@@ -1,0 +1,11 @@
+1, input, a
+2, input, b
+3, &, r, a, b
+4, |, y, a, b
+5, ^, t, a, b
+6, print, r
+7, print, y
+8, print, t
+9, ~, t, r
+10, print, t 
+11, print, r

@@ -1,0 +1,11 @@
+1, input, a
+2, =, b, 0
+3, call, log
+4, label, log
+5, ifgoto, eq, a, 1, 10 
+6, +, b, b, 1
+7, /, a, a, 2
+8, call, log
+9, ret
+10, print, b
+11, ret

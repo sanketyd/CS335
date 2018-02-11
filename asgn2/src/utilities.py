@@ -7,7 +7,8 @@ leader_instructions = [
     "label",
     "call",
     "print_int",
-    "scan_int"
+    "scan_int",
+    "goto"
 ]
 
 main_return_index = -1
@@ -115,6 +116,15 @@ class Instruction:
             else:
                 self.jmp_to_label = jmp_location
 
+        elif instr_type == "goto":
+            self.instr_type = "goto"
+
+            jmp_location = statement[-1].strip()
+            if jmp_location.isdigit():
+                self.jmp_to_line = jmp_location
+            else:
+                self.jmp_to_label = jmp_location
+
         elif instr_type == "print":
             # 10, print, variable
             self.instr_type = "print_int"
@@ -129,7 +139,6 @@ class Instruction:
 
         elif instr_type in ["~","!","++","--"]:
             #10, ++, out, variable
-            print(instr_type)
             self.operation = instr_type
             self.instr_type = "unary"
             self.inp1, self.array_index_i1 = self.handle_array_notation(statement[-1].strip())
@@ -235,6 +244,8 @@ def read_three_address_code(filename):
         instruction_set = csv.reader(csvfile, delimiter=',')
         index_label_to_be_added = set()
         for statement in instruction_set:
+            if len(statement) == 0:
+                continue
             IR = Instruction(statement)
             IR_code.append(IR)
             line_no = IR.line_no
@@ -243,7 +254,7 @@ def read_three_address_code(filename):
                 if instr_type != "label" and instr_type != "print_int":
                     line_no += 1
                 leader.add(line_no)
-            if instr_type == "ifgoto":
+            if instr_type == "ifgoto" or instr_type == "goto":
                 goto_line = statement[-1].strip()
                 if goto_line.isdigit():
                     goto_line = int(goto_line)

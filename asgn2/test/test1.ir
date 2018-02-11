@@ -1,0 +1,20 @@
+1, decl_array, a[10]
+2, =, i, 0
+3, =, a[0], 1
+4, call, log
+5, label, log
+6, ifgoto, eq, i, 10, 13
+7, =, tm, a[i] 
+8, +, i, i, 1
+9, +, tm, tm, 2
+10, =, a[i], tm
+11, call, log
+12, ret
+13, =, y, a[9]
+13, print, y
+14, =, b[0], 2
+15, =, r, b[0]
+16, =, u, a[9]
+17, +, u, u, r
+18, print, u
+19, ret

@@ -214,9 +214,13 @@ class CodeGenerator:
             print("\t" + log_op(instr.operation) + R1 + ", " + R2)
         else:
             print("\tnot " + R1)
+        update_reg_descriptors(R1,instr.out)
+        free_regs(instr)
 
     def op_unary(self, instr):
-        R1, flag = get_reg(instr)
+        R1, flag = get_reg(instr,compulsory=False)
+        if R1 not in reg_descriptor.keys():
+            R1 = "dword " + R1
         if flag:
             print("\tmov "+ R1 + ", " + get_best_location(instr.inp1))
         if instr.operation == "!" or instr.operation == "~":
@@ -225,7 +229,8 @@ class CodeGenerator:
             print("\tinc "+ R1)
         elif instr.operation == "--":
             print("\tdec "+ R1)
-        update_reg_descriptors(R1,instr.out)
+        if R1 in reg_descriptor.keys():
+            update_reg_descriptors(R1,instr.out)
         free_regs(instr)
 
     def op_ifgoto(self, instr):
@@ -291,6 +296,14 @@ class CodeGenerator:
 
         free_regs(instr)
 
+    def op_goto(self, instr):
+        save_context()
+        jmp_label = None
+        if instr.jmp_to_line != None:
+            jmp_label = "line_no_" + str(instr.jmp_to_line)
+        else:
+            jmp_label = instr.jmp_to_label
+        print("\tjmp " + jmp_label)
 
     def op_label(self, instr):
         print(instr.label_name + ":")
@@ -342,6 +355,9 @@ class CodeGenerator:
 
         elif instr_type == "ifgoto":
             self.op_ifgoto(instr)
+
+        elif instr_type == "goto":
+            self.op_goto(instr)
 
         elif instr_type == "return":
             self.op_return(instr)

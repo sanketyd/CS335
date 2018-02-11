@@ -89,14 +89,14 @@ def get_reg(instr, compulsory=True, exclude=[]):
                 if len(value) == 0:
                     return key, True
 
-        if compulsory or per_inst_next_use[out].next_use:
+        if compulsory or instr.per_inst_next_use[out].next_use:
             R1 = None
             next_use = -1000000000
             for reg, content in reg_descriptor.items():
                 if reg not in exclude:
                     for var in content:
                         n_use = symbol_table[var].next_use
-                        if n_use and n_use > next_use:
+                        if not n_use or n_use > next_use:
                             next_use = n_use
                             R1 = reg
             save_reg_contents(R1)
