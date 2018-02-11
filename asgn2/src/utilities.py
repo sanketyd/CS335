@@ -11,7 +11,6 @@ leader_instructions = [
     "goto"
 ]
 
-main_return_index = -1
 symbol_table = dict()
 reg_descriptor = dict()
 
@@ -58,7 +57,6 @@ class Instruction:
         self.jmp_to_line = None
         self.jmp_to_label = None
         self.per_inst_next_use = dict()
-        self.is_main_return = False
         self.build(statement)
         self.populate_per_inst_next_use()
 
@@ -165,10 +163,6 @@ class Instruction:
             self.label_name = statement[-1].strip()
 
         elif instr_type == "ret":
-            global main_return_index
-            if main_return_index == -1:
-                main_return_index = self.line_no
-                self.is_main_return = True
             self.instr_type = "return"
             if len(statement) == 3:
                 self.out = statement[-1].strip()

@@ -65,10 +65,9 @@ def save_reg_contents(reg):
 def get_reg(instr, compulsory=True, exclude=[]):
     '''
     Uses next use heuristic to allocate registers
-    Returns 3 values:
+    Returns 2 values:
     1. R1: The best register for inp1
-    2. R2: if inp2 is already in a register, returns it, otherwise None
-    3. flag: boolean to know whether a register has to be allocated to inp1
+    2. flag: boolean to know whether a register has to be allocated to inp1
     '''
     inp1 = instr.inp1
     inp2 = instr.inp2
