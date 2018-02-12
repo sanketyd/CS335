@@ -243,7 +243,7 @@ class CodeGenerator:
         if instr.jmp_to_line != None:
             jmp_label = "line_no_" + str(instr.jmp_to_line)
         else:
-            jmp_label = instr.jmp_to_label
+            jmp_label = "func_" + instr.jmp_to_label
 
         operator = instr.operation
         if is_valid_number(instr.inp1) and is_valid_number(instr.inp2):
@@ -304,15 +304,15 @@ class CodeGenerator:
         if instr.jmp_to_line != None:
             jmp_label = "line_no_" + str(instr.jmp_to_line)
         else:
-            jmp_label = instr.jmp_to_label
+            jmp_label = "func_" + instr.jmp_to_label
         print("\tjmp " + jmp_label)
 
     def op_label(self, instr):
-        print(instr.label_name + ":")
+        print("func_" + instr.label_name + ":")
 
     def op_call_function(self, instr):
         save_context()
-        print("\tcall " + instr.jmp_to_label)
+        print("\tcall func_" + instr.jmp_to_label)
         if instr.out != None:
             update_reg_descriptors("eax",instr.out)
 

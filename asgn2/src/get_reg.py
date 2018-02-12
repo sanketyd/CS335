@@ -96,7 +96,8 @@ def get_reg(instr, compulsory=True, exclude=[]):
                     for var in content:
                         n_use = symbol_table[var].next_use
                         if not n_use or n_use > next_use:
-                            next_use = n_use
+                            if n_use:
+                                next_use = n_use
                             R1 = reg
             save_reg_contents(R1)
             return R1, True
