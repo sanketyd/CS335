@@ -1,0 +1,10 @@
+1,=,a,2
+2,=,b,&a
+3,print,b
+4,=,c,*b
+5,print,c
+6,=,x,69
+7,=,*b,x
+8,print,b
+9,=,d,*b
+10,print,d
