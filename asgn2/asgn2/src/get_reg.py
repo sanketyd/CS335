@@ -107,4 +107,4 @@ def get_reg(instr, compulsory=True, exclude=[]):
             return R1, True
 
         else:
-            return "[" + out +"]", False
+            return "[" + out + "]", False

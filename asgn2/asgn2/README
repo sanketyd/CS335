@@ -78,7 +78,7 @@ Test cases:-
         bin_search.ir:- Input:- n, key, n sorted array elements
                         Output:- This test case implements Binary Search and outputs index of the key.
 
-        goto.ir:- This files test goto.
+        goto.ir:- This file tests goto.
         ifgoto_rocks.ir:- This file tests ifgoto if run correct print only one value
         divide_neg.ir:- This file tests division by negative number
         array_index.ir:- This file tests next use function

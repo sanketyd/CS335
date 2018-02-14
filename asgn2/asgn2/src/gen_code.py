@@ -169,7 +169,7 @@ class CodeGenerator:
         if flag:
             print("\tmov "+ R1 + ", " + get_best_location(instr.inp1))
         R2 = None
-        if instr.inp2.isdigit():
+        if is_valid_number(instr.inp2):
             R2 = instr.inp2
         else:
             R2 = get_best_location(instr.inp2)
@@ -186,7 +186,7 @@ class CodeGenerator:
         if flag:
             print("\tmov "+ R1 + ", " + get_best_location(instr.inp1))
         R2 = None
-        if instr.inp2.isdigit():
+        if is_valid_number(instr.inp2):
             R2 = instr.inp2
         else:
             R2 = get_best_location(instr.inp2)
