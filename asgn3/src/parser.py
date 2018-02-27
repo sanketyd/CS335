@@ -251,20 +251,344 @@ def main():
 	def p_VariableInitializer(p):
 		''' VariableInitializer : ArrayInitializer
 			| Expression '''
+	
+	def p_ArrayInitializer(p):
+		''' ArrayInitializer : '''      #TODO
+
+	#########################################################################
+
+	def p_Block(p):
+		''' Block : BLOCK_OPENER BlockStatements BLOCK_CLOSER '''
+
+	def p_BlockStatements(p):
+		''' BlockStatements : 
+			| BlockStatements BlockStatement '''
+
+	def p_BlockStatement(p):
+		''' BlockStatement : LocalVariableDeclarationStatement
+			| ClassDeclaration
+			| Statement
+			| Identifier COLON Statement ''' #TODO Check COLON token in lexer
+
+	def p_LocalVariableDeclarationStatement(p):
+		'''LocalVariableDeclarationStatement : VariableModifierList Type VariableDeclarators SEMICOLON '''
+
+	def p_Statement(p):
+		''' Statement : Block
+			| SEMICOLON
+			|
+			| Identifier COLON Statement
+			| StatementExpression SEMICOLON
+			| IF ParExpression Statement
+			| IF ParExpression Statement ELSE Statement
+			| ASSERT Expression SEMICOLON
+			| ASSERT Expression COLON Expression SEMICOLON
+			| SWITCH ParExpression BLOCK_OPENER SwitchBlockStatementGroups BLOCK_CLOSER
+			| WHILE ParExpression Statement
+			| DO Statement WHILE ParExpression SEMICOLON
+			| FOR L_PAREN ForControl R_PAREN Statement
+			| BREAK SEMICOLON
+			| BREAK Identifier SEMICOLON
+			| Continue SEMICOLON
+			| Continue Identifier SEMICOLON
+			| RETURN SEMICOLON
+			| RETURN Identifier SEMICOLON
+			| THROW Expression SEMICOLON
+			| TRY BLOCK Catches
+			| TRY BLOCK FINALLY
+			| TRY BLOCK Catches FINALLY '''
+
+	def p_StatementExpression(p):
+		''' StatementExpression : Expression '''
+	
+	###############################################################################
+	
+	def p_Catches(p):
+		''' Catches : CatchClause
+			| Catches CatchClause '''
+	
+	def p_CatchClause(p):
+		''' CatchClause : catch L_PAREN VariableModifierList CatchType Identifier R_PAREN Block '''
+
+	def p_CatchType(p):
+		''' CatchType : QualifiedIdentifier
+			| CatchType | QualifiedIdentifier '''
+
+	def p_Finally(p):
+		''' Finally : FINALLY Block '''
+
+	#################################################################################
+
+	def p_SwitchBlockStatementGroups(p):
+		''' SwitchBlockStatementGroups : 
+			| SwitchBlockStatementGroups SwitchBlockStatementGroup '''
+
+	def p_SwitchBlockStatementGroup(p):
+		''' SwitchBlockStatementGroup : SwitchLabels BlockStatements '''
+
+	def p_SwitchLabels(p):
+		''' SwitchLabels : SwitchLabel
+			| SwitchLabels SwitchLabel '''
+
+	def p_SwitchLabel(p):
+		''' SwitchLabel : CASE Expression COLON
+			| CASE EnumConstantName COLON
+			| DEFAULT COLON  ''' #TODO CheckToken
+
+	def p_EnumConstantName(p):
+		''' EnumConstantName : Identifier '''
+
+	def p_ForControl(p):
+		''' ForControl : ForVarControl
+			| ForInit SEMICOLON SEMICOLON
+			| ForInit SEMICOLON Expression SEMICOLON ForUpdate
+			| ForInit SEMICOLON SEMICOLON ForUpdate
+			| ForInit SEMICOLON Expression SEMICOLON '''
+
+	def p_ForVarControl(p):
+		''' ForVarControl : VariableModifierList Type VariableDeclaratorId ForVarControlRest '''
+
+	def p_ForVarControlRest(p):
+		''' ForVarControlRest : ForVariableDeclaratorRest SEMICOLON SEMICOLON
+			| ForVariableDeclaratorRest SEMICOLON Expression SEMICOLON ForUpdate
+			| ForVariableDeclaratorRest SEMICOLON SEMICOLON ForUpdate
+			| ForVariableDeclaratorRest SEMICOLON Expression SEMICOLON 
+			| COLON Expression '''
+	def p_ForVariableDeclaratorRest(p):
+		''' ForVariableDeclaratorRest : ASSIGN VariableIntializer
+			|
+			| ForVariableDeclaratorRest COMMA VariableDeclarator '''
+
+	def p_ForInit(p):
+		''' ForInit : StatementExpression
+			| ForInit COMMA StatementExpression '''
+
+	def p_ForUpdate(p):
+		''' ForUpdate : StatementExpression
+			| ForInit COMMA StatementExpression '''
+
+	###############################################################################################
+
+	def p_Expression(p):
+		''' Expression : Expression1
+			| Expression1 AssignmentOperator Expression1 
+			| LambdaExpression '''
+	def p_LambdaExpression(p):
+		''' LambdaExpression : LambdaParameters MINUS GST LambdaBody'''
+
+	def _LambdaParameters(p):
+		''' LambdaParameters : Identifier
+			| L_PAREN R_PAREN 
+			| L_PAREN FormalParameters R_PAREN
+			| L_PAREN QualifieIdentifierList R_PAREN '''
+
+	def p_LambdaBody(p):
+		''' LambdaBody : Expression
+			| Block '''
+
+	def p_AssignmentOperator(p):
+		''' AssignmentOperator : ASSIGN
+			| PLUSEQ
+			| MINUSEQ
+			| MULTEQ
+			| DIVEQ
+			| MODEQ
+			| LSHIFTEQ
+			| RSHIFTEQ ''' #TODO check rest symbol
+
+	def p_Expression1(p):
+		''' Expression1 : Expression2
+			| EExpression2 Expression1Rest '''
+
+	def p_Expression1Rest(p):
+		''' Expression1Rest : QUESTION Expression COLON Expression1 '''
+
+	def p_Expression2(p):
+		''' Expression2 : Expression3
+			| Expression3 Expression2Rest '''
+
+	def p_Expression2Rest(p):
+		''' Expression2Rest : InfixOpListExpression
+			| INSTANCEOF Type '''
+	
+	def p_InfixOpListExpression(p):
+		''' InfixOpListExpression : 
+			| InfixOpListExpression InfixOp Expression3 '''
+
+	#####################################################################################
 
 
+	def p_InfixOp(p):
+		''' InfixOp : LOGICAL_OR
+			| LOGICAL_AND
+			| BITWISE_OR
+			| BITWISE_AND
+			| BITWISE_XOR
+			| EQUALS
+			| NOT_EQUAL
+			| LST
+			| GST
+			| LEQ
+			| GEQ
+			| L_SHIFT
+			| R_SHIFT
+			| PLUS
+			| MINUS
+			| MULT
+			| DIVIDE
+			| MODULO '''
+
+	def p_Expression3(p):
+		''' Expression3  : PrefixOp Expression3
+			| L_PAREN Expression R_PAREN Expression3
+			| L_PAREN Type R_PAREN Expression3
+			| Primary SelectorList PostfixOpList '''
+
+	def p_SelectorList(p):
+		''' SelectorList : 
+			| SelectorList Selector '''
+
+	def p_PostfixOpList(p):
+		''' PostfixOpList : 
+			| PostfixOpList PostfixOp '''
+
+	def p_PrefixOp(p):
+		''' PrefixOp : INCREMENT
+			| DECREMENT
+			| LOGICAL_NOT
+			| BITWISE_NOT
+			| PLUS
+			| MINUS '''
+
+	def p_PostfixOp(p):
+		''' PostfixOp : INCREMENT
+			| DECREMENT '''
+
+	###########################################################################
+
+	def p_Primary(p):
+		''' Primary : Literal
+			| ParExpression
+			| THIS 
+			| THIS Arguments
+			| SUPER SuperSuffix
+			| NEW Creator
+			| NonWildcardTypeArguments ExplicitGenericInvocationSuffix 
+			| NonWildcardTypeArguments THIS Arguments
+			| IdentifierDotList 
+			| IdentifierDotList IdentifierSuffix
+			| BasicType MultArrSign DOT CLASS
+			| VOID DOT CLASS '''
+	
+	def p_IdentifierDotList(p):
+		''' IdentifierDotList : Identifier
+			| IdentifierDotList DOT Identifier '''
+
+	def p_Literal(p):
+		''' Literal : IntegerLiteral
+			| FloatingPointLiteral
+			| CharacterLiteral
+			| StringLiteral
+			| BooleanLiteral
+			| NullLiteral '''
+
+	def p_ParExpression(p):
+		''' ParExpression : L_PAREN Expression R_PAREN '''
+
+	def p_Arguments(p):
+		''' Arguments : L_PAREN R_PAREN
+			| L_PAREN ExpressionList R_PAREN '''
+	
+	def p_ExpressionList(p):
+		''' ExpressionList : Expression
+			ExpressionList COMMA Expression '''
+
+	def p_SuperSuffix(p):
+		''' SuperSuffix : Arguments
+			| DOT Identifier 
+			| DOT Identifier Arguments '''
+
+	def p_ExplicitGenericInvocationSuffix(p): 
+		'''  ExplicitGenericInvocationSuffix : SUPER SuperSuffix
+			| Identifier Arguments ''' 
+
+	#################################################################################
+
+	def p_Creator(p):
+		''' Creator : NonWildCardTypeArguments CreatedName ClassCreatorRest
+			| CreatedName ClassCreatorRest
+			| CreatorName ArrayCreatorRest '''
+
+	def p_CreatedName(p):
+		''' CreatedName : IdentifierTypeArgOrDiamond
+			| CreatedName DOT IdentifierTypeArgOrDiamond '''
+	def p_IdentifierTypeArgOrDiamond(p):
+		''' IdentifierTypeArgOrDiamond : Identifier TypeArgumentsOrDiamond
+			| Identifier '''
+	
+	def p_ClassCreatorRest(p):
+		''' ClassCreatorRest : Arguments Classbody
+			| Arguments '''
+
+	def p_ArrayCreatorRest(p):
+		''' ArrayCreatorRest : ''' #TODO
+
+	def p_IdentifierSuffix(p):
+		''' IdentifierSuffix : MultArrSign DOT CLASS
+			| Expression
+			|
+			| Arguments
+			| DOT CLASS
+			| DOT ExplicitGenericInvocation
+			| DOT THIS
+			| DOT SUPER Arguments
+			| DOT NEW NonWildCardArguments InnerCreator
+			| DOT NEW InnerCreator '''
+
+	def p_InnerCreator(p):
+		''' InnerCreator : Identifier ClassCreatorRest 
+			| Identifier NonWildCardTypeArgumentsOrDiamond ClassCreatorRest '''
+
+	def p_Selector(p):
+		''' Selector : DOT Identifier
+			| DOT Identifier Arguments
+			| DOT ExplicitGenericInvocation
+			| DOT THIS
+			| SUPER SuperSuffix
+			| DOT NEW InnerCreator
+			| DOT NEW NonWildCardTypeArguments Innercreator
+			|
+			| Expression '''
+
+	###############################################################################
+
+	def p_EnumBody(p):
+		''' EnunmBody : 
+			| EnumBody InnerEnumBody '''
+
+	def p_InnerEnumBody(p):  #TODO confusion
+		''' InnerEnumBody : EnumConstants COMMA EnumBodyDeclarations
+			| EnumConstants COMMA 
+			| EnumConstants EnumBodyDeclarations
+			| COMMA EnumBodyDeclarations
+			| EnumConstants
+			| COMMA
+			| EnumBodyDeclarations '''
 
 
+	def p_EnumConstants(p):
+		''' EnumConstants : EnumConstant
+			| EnumConstants COMMA EnumConstant '''
 
+	def p_EnumConstant(p):
+		''' EnumConstant : Identifier Arguments ClassBody
+			| Identifier Arguments
+			| Identifier ClassBody 
+			| Identifier '''
 
-
-
-
-
-
-
-
-
+	def p_EnumBodyDeclarations(p):
+		''' EnumBodyDeclarations : SEMICOLON
+			| EnumBodyDeclarations ClassBodyDeclaration '''
 
 
 
