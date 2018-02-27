@@ -55,9 +55,13 @@ def main():
 	
 	def p_EnumDeclaration(p):
 		''' EnumDeclaration : ENUM IDENTIFIER EnumBody '''
+
 #####################################################################################
+	def p_ArrSignList(p):
+		'''ArrSignList : 
+			| ArrSignList L_SQBR R_SQBR '''
 	def p_Types(p):
-		'''Types : Type | TypeArr'''
+		'''Types : Type ArrSignList'''
 	
 	def p_PrimType(p):
 		'''PrimType : BOOLEAN
@@ -74,10 +78,6 @@ def main():
 		'''Type : PrimType 
 			| ReferenceType '''
 	
-	def p_TypeArr(p):
-		'''TypeArr : PrimType L_SQBR R_SQBR 
-			| TypeArr L_SQBR R_SQBR ''' 
-	
 	def p_ReferenceType(p):
 		'''ReferenceType : RefTypeComponent 
 			| ReferenceType DOT RefTypeComponent '''
@@ -87,7 +87,7 @@ def main():
 			| Identifier TypeArguments '''
 	
 	def p_TypeArguments(p):
-		''' TypeArguments : L_SHIFT TypeArgumentList R_SHIFT'''
+		''' TypeArguments : LST TypeArgumentList GST'''
 
 	def p_TypeArgumentList(p):
 		''' TypeArgumentList : TypeArgument 
@@ -99,4 +99,102 @@ def main():
 
 ################################################################################
 
+	def p_NonWildCardTypeArguments(p):
+		''' NonWildCardTypeArguments : LST TypeList GST '''
 
+	def p_TypeList(p):
+		''' TypeList : ReferenceType
+			| TypeList COMMA ReferenceType '''
+
+	def p_TypeArgumentsOrDiamond(p):
+		''' TYpeArgumentsOrDiamond : LST GST
+			| TypeArguments '''
+
+	def p_NonWildCardTypeArgumentsOrDiamond(p):
+		''' NonWildCardTypeArgumentsOrDiamond : LST GST
+			| NonWildCardTypeArguments '''
+
+	def p_TypeParameters(p):
+		''' TypeParameters : LST TypeParameterList GST '''
+
+	def p_TypeParameterList(p):
+		''' TypeParameterList : TypeParameter
+			| TypeParameterList COMMA TypeParameter '''
+	
+	def p_TypeParameter(p):
+		''' TypeParameter : Identifier
+			| Identifier EXTENDS Bound '''
+	def p_Bound(p):
+		''' Bound : ReferenceType
+			| Bound BITWISE_AND ReferenceType '''
+
+##################################################################################
+
+	def p_Modifier(p):
+		''' Modifier: STATIC
+			| ABSTRACT
+			| FINAL '''
+
+##################################################################################
+
+	def p_ClassBody(p):   ##TODO check
+		''' ClassBody : 
+			| ClassBody BLOCK_OPENER ClassBodyDeclarataion BLOCK_CLOSER '''
+
+	def p_ClassBodyDeclaration(p):
+		''' ClassBodyDeclaration : SEMICOLON
+			| STATIC Block
+			| Block
+			| ModifierList MemberDeclaration '''
+
+	def p_ModifierList(p):
+		''' ModifierList : Modifier 
+			| ModifierList Modifier '''
+
+	def p_MemberDeclaration(p):
+		''' MemberDeclaration : MethodOrFieldDecl
+			| VOID Identifier VoidMethodDeclaratorRest
+			| Identifier ConstructorDeclaratorRest
+			| GenericMethodOrConstructorDecl
+			| ClassDeclaration
+		'''
+
+	def p_MethodOrFieldDeclaration(p):
+		''' MethodOrFoeldDeclaration : Type Identifier MethodOrFieldRest '''
+
+	def p_MethodOrFieldRest(p):
+		''' MethodOrFieldRest : FieldDeclarationRest SEMICOLON	
+			| MethodDeclaratorRest '''
+
+	def p_FieldDeclaration(p):
+		''' FieldDeclaration : VariableDeclaratorRest VariableDeclaratorList '''
+
+	def p_VariableDeclaratorList(p):
+		''' VariableDeclaratorList : VariableDeclarator
+			| VariableDeclaratorList COMMA VariableDeclarator '''
+
+	def p_MethodDeclaratorRest(p):
+		''' MethodDeclaratorRest : FormalParameters ArrSignList SEMICOLON
+			| FormalParameters ArrSignList THROWS QualifiedIdentifierList SEMICOLON
+			| FormalParameters ArrSignList Block
+			| FormalParameters ArrSignList THROWS QualifiedIdentifierList Block '''
+	
+	def p_ConstructorDeclaratorRest(p):
+		''' ConstructorDeclaratorRest : FormalParameters Block
+			| FormalParameters THROWS QualifiedIdentifierList Block '''
+
+	def p_VoidMethodDeclaratorRest(p):
+		''' VoidMethodDeclaratorRest : FormalParameters SEMICOLON
+			| FormalParameters THROWS QualifiedIdentifierList SEMICOLON
+			| FormalParameters Block
+			| FormalParameters THROWS QualifiedIdentifierList Block '''
+
+	def p_GenericMethodOrConstructorDecl(p):
+		''' GenericMethodOrConstructorDecl : TypeParameters GenericMethodOrConstructorRest'''
+
+	def p_GenericMethodOrConstructorRest(p):
+		''' GenericMethodOrConstructorRest : Type Identifier MethodDeclaratorRest
+			| VOID Identifier MethodDeclaratorRest
+			| Identifier ConstructorDeclaratorRest '''
+
+###########################################################################################
