@@ -198,3 +198,86 @@ def main():
 			| Identifier ConstructorDeclaratorRest '''
 
 ###########################################################################################
+
+	def p_ConstantDeclaratorsRest(p):
+		''' ConstantDeclaratorsRest : ConstantDeclaratorRest ConstantDeclaratorList'''
+
+	def p_ConstantDeclaratorList(p):
+		''' ConstantDeclaratorList : 
+			| ConstantDeclaratorList COMMA ConstantDeclarator '''
+
+	def p_ConstantDeclaratorRest(p):
+		''' ConstantDeclaratorRest : ArrSignList ASSIGN VariableInitializer'''
+
+	def p_ConstantDeclarator(p):
+		''' ConstantDeclarator : Identifier ConstantDeclaratorRest'''
+
+##########################################################################################
+
+	def p_FormalParameters(p):
+		''' FormalParameters : L_PAREN R_PAREN
+			| L_PAREN FormalParameterDecls R_PAREN '''
+
+	def p_FormalParameterDecls(p):
+		''' FormalParameterDecls : VariableModifierList Type FormalParameterDeclsRest '''
+
+	def p_VariableModifierList(p):
+		''' VariableModifierList : 
+			| VariableModifierList VariableModifier '''
+
+	def p_VariableModifier(p):
+		''' VariableModifier : FINAL
+			| ANNOTATION ''' #TODO remove annotation
+
+	def p_FormalParameterDeclsRest(p):
+		''' FormalParameterDeclsRest : VariableDeclaratorId COMMA FormalParameterDecls
+			| VariableDeclaratorId
+			| DOT DOT DOT VariableDeeclaratorId ''' #TODO what is this!!!
+
+	def p_VariableDeclaratorId(p):
+		'''VariableDeclaratorId : Identifier ArrSignList '''
+
+	def p_VariableDeclarators(p):
+		''' VariableDeclarators : VariableDeclarator
+			| VariableDeclarators COMMA VariableDeclarator '''
+
+	def p_VariableDeclarator(p):
+		''' VariableDeclarator : Identifier VariableDeclaratorRest'''
+
+	def p_VariableDeclaratorRest(p):
+		''' VariableDeclaratorRest : ArrSignList
+			| ArrSignList ASSIGN VariableInitializer '''
+
+	def p_VariableInitializer(p):
+		''' VariableInitializer : ArrayInitializer
+			| Expression '''
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
