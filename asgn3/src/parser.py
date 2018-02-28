@@ -95,7 +95,7 @@ def main():
 	
 	def p_TypeArgument(p):
 		''' TypeArgument : ReferenceType
-			| QUESTION ...''' ## CONFUSION HERE
+			| ''' ## CONFUSION HERE
 
 ################################################################################
 
@@ -131,7 +131,7 @@ def main():
 ##################################################################################
 
 	def p_Modifier(p):
-		''' Modifier: STATIC
+		''' Modifier : STATIC
 			| ABSTRACT
 			| FINAL '''
 
@@ -312,7 +312,7 @@ def main():
 
 	def p_CatchType(p):
 		''' CatchType : QualifiedIdentifier
-			| CatchType | QualifiedIdentifier '''
+			| CatchType  QualifiedIdentifier '''
 
 	def p_Finally(p):
 		''' Finally : FINALLY Block '''
@@ -501,7 +501,7 @@ def main():
 	
 	def p_ExpressionList(p):
 		''' ExpressionList : Expression
-			ExpressionList COMMA Expression '''
+			| ExpressionList COMMA Expression '''
 
 	def p_SuperSuffix(p):
 		''' SuperSuffix : Arguments
@@ -590,18 +590,9 @@ def main():
 		''' EnumBodyDeclarations : SEMICOLON
 			| EnumBodyDeclarations ClassBodyDeclaration '''
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	yacc.yacc()
+	inputfile = open(sys.argv[1],'r').read()
+	print(yacc.parse(inputfile))
+	
+if __name__ == "__main__":
+	main()
