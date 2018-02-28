@@ -16,12 +16,12 @@ def main():
 
 	def p_CompileUnit(p):
 		''' CompileUnit : PackageDeclaration
-			| ImportDeclarations SEMICOLON
-			| TypeDeclaration SEMICOLON'''
+			| ImportDeclarations STMT_TERMINATOR
+			| TypeDeclaration STMT_TERMINATOR'''
 	
 	def p_PackageDeclaration(p):
 		''' PackageDeclaration : 
-			| PACKAGE QualifiedIdentifier SEMICOLON'''
+			| PACKAGE QualifiedIdentifier STMT_TERMINATOR'''
 	
 	def p_ImportDeclarations(p):
 		''' ImportDeclarations : ImportDeclaration
@@ -38,7 +38,7 @@ def main():
 		''' TypeOnDemandImport : IMPORT QualifiedIdentifier DOT MULT'''
 	
 	def p_TypeDeclartion(p):
-		''' TypeDeclaration : ModifiedClassDeclaration SEMICOLON'''
+		''' TypeDeclaration : ModifiedClassDeclaration STMT_TERMINATOR'''
 	
 	def p_ModifiedClassDeclaration(p):
 		''' ModifiedClassDeclaration : Modifiers ClassDeclaration 
@@ -142,7 +142,7 @@ def main():
 			| ClassBody BLOCK_OPENER ClassBodyDeclarataion BLOCK_CLOSER '''
 
 	def p_ClassBodyDeclaration(p):
-		''' ClassBodyDeclaration : SEMICOLON
+		''' ClassBodyDeclaration : STMT_TERMINATOR
 			| STATIC Block
 			| Block
 			| ModifierList MemberDeclaration '''
@@ -163,7 +163,7 @@ def main():
 		''' MethodOrFoeldDeclaration : Type Identifier MethodOrFieldRest '''
 
 	def p_MethodOrFieldRest(p):
-		''' MethodOrFieldRest : FieldDeclarationRest SEMICOLON	
+		''' MethodOrFieldRest : FieldDeclarationRest STMT_TERMINATOR	
 			| MethodDeclaratorRest '''
 
 	def p_FieldDeclaration(p):
@@ -174,8 +174,8 @@ def main():
 			| VariableDeclaratorList COMMA VariableDeclarator '''
 
 	def p_MethodDeclaratorRest(p):
-		''' MethodDeclaratorRest : FormalParameters ArrSignList SEMICOLON
-			| FormalParameters ArrSignList THROWS QualifiedIdentifierList SEMICOLON
+		''' MethodDeclaratorRest : FormalParameters ArrSignList STMT_TERMINATOR
+			| FormalParameters ArrSignList THROWS QualifiedIdentifierList STMT_TERMINATOR
 			| FormalParameters ArrSignList Block
 			| FormalParameters ArrSignList THROWS QualifiedIdentifierList Block '''
 	
@@ -184,8 +184,8 @@ def main():
 			| FormalParameters THROWS QualifiedIdentifierList Block '''
 
 	def p_VoidMethodDeclaratorRest(p):
-		''' VoidMethodDeclaratorRest : FormalParameters SEMICOLON
-			| FormalParameters THROWS QualifiedIdentifierList SEMICOLON
+		''' VoidMethodDeclaratorRest : FormalParameters STMT_TERMINATOR
+			| FormalParameters THROWS QualifiedIdentifierList STMT_TERMINATOR
 			| FormalParameters Block
 			| FormalParameters THROWS QualifiedIdentifierList Block '''
 
@@ -271,29 +271,29 @@ def main():
 			| Identifier COLON Statement ''' #TODO Check COLON token in lexer
 
 	def p_LocalVariableDeclarationStatement(p):
-		'''LocalVariableDeclarationStatement : VariableModifierList Type VariableDeclarators SEMICOLON '''
+		'''LocalVariableDeclarationStatement : VariableModifierList Type VariableDeclarators STMT_TERMINATOR '''
 
 	def p_Statement(p):
 		''' Statement : Block
-			| SEMICOLON
+			| STMT_TERMINATOR
 			|
 			| Identifier COLON Statement
-			| StatementExpression SEMICOLON
+			| StatementExpression STMT_TERMINATOR
 			| IF ParExpression Statement
 			| IF ParExpression Statement ELSE Statement
-			| ASSERT Expression SEMICOLON
-			| ASSERT Expression COLON Expression SEMICOLON
+			| ASSERT Expression STMT_TERMINATOR
+			| ASSERT Expression COLON Expression STMT_TERMINATOR
 			| SWITCH ParExpression BLOCK_OPENER SwitchBlockStatementGroups BLOCK_CLOSER
 			| WHILE ParExpression Statement
-			| DO Statement WHILE ParExpression SEMICOLON
+			| DO Statement WHILE ParExpression STMT_TERMINATOR
 			| FOR L_PAREN ForControl R_PAREN Statement
-			| BREAK SEMICOLON
-			| BREAK Identifier SEMICOLON
-			| Continue SEMICOLON
-			| Continue Identifier SEMICOLON
-			| RETURN SEMICOLON
-			| RETURN Identifier SEMICOLON
-			| THROW Expression SEMICOLON
+			| BREAK STMT_TERMINATOR
+			| BREAK Identifier STMT_TERMINATOR
+			| Continue STMT_TERMINATOR
+			| Continue Identifier STMT_TERMINATOR
+			| RETURN STMT_TERMINATOR
+			| RETURN Identifier STMT_TERMINATOR
+			| THROW Expression STMT_TERMINATOR
 			| TRY BLOCK Catches
 			| TRY BLOCK FINALLY
 			| TRY BLOCK Catches FINALLY '''
@@ -340,19 +340,19 @@ def main():
 
 	def p_ForControl(p):
 		''' ForControl : ForVarControl
-			| ForInit SEMICOLON SEMICOLON
-			| ForInit SEMICOLON Expression SEMICOLON ForUpdate
-			| ForInit SEMICOLON SEMICOLON ForUpdate
-			| ForInit SEMICOLON Expression SEMICOLON '''
+			| ForInit STMT_TERMINATOR STMT_TERMINATOR
+			| ForInit STMT_TERMINATOR Expression STMT_TERMINATOR ForUpdate
+			| ForInit STMT_TERMINATOR STMT_TERMINATOR ForUpdate
+			| ForInit STMT_TERMINATOR Expression STMT_TERMINATOR '''
 
 	def p_ForVarControl(p):
 		''' ForVarControl : VariableModifierList Type VariableDeclaratorId ForVarControlRest '''
 
 	def p_ForVarControlRest(p):
-		''' ForVarControlRest : ForVariableDeclaratorRest SEMICOLON SEMICOLON
-			| ForVariableDeclaratorRest SEMICOLON Expression SEMICOLON ForUpdate
-			| ForVariableDeclaratorRest SEMICOLON SEMICOLON ForUpdate
-			| ForVariableDeclaratorRest SEMICOLON Expression SEMICOLON 
+		''' ForVarControlRest : ForVariableDeclaratorRest STMT_TERMINATOR STMT_TERMINATOR
+			| ForVariableDeclaratorRest STMT_TERMINATOR Expression STMT_TERMINATOR ForUpdate
+			| ForVariableDeclaratorRest STMT_TERMINATOR STMT_TERMINATOR ForUpdate
+			| ForVariableDeclaratorRest STMT_TERMINATOR Expression STMT_TERMINATOR 
 			| COLON Expression '''
 	def p_ForVariableDeclaratorRest(p):
 		''' ForVariableDeclaratorRest : ASSIGN VariableIntializer
@@ -374,7 +374,7 @@ def main():
 			| Expression1 AssignmentOperator Expression1 
 			| LambdaExpression '''
 	def p_LambdaExpression(p):
-		''' LambdaExpression : LambdaParameters MINUS GST LambdaBody'''
+		''' LambdaExpression : LambdaParameters LAMBDA_TOKEN LambdaBody'''
 
 	def _LambdaParameters(p):
 		''' LambdaParameters : Identifier
@@ -401,7 +401,7 @@ def main():
 			| EExpression2 Expression1Rest '''
 
 	def p_Expression1Rest(p):
-		''' Expression1Rest : QUESTION Expression COLON Expression1 '''
+		''' Expression1Rest : Expression COLON Expression1 ''' #should add QUESTION before Expression
 
 	def p_Expression2(p):
 		''' Expression2 : Expression3
@@ -485,12 +485,11 @@ def main():
 			| IdentifierDotList DOT Identifier '''
 
 	def p_Literal(p):
-		''' Literal : IntegerLiteral
-			| FloatingPointLiteral
-			| CharacterLiteral
-			| StringLiteral
-			| BooleanLiteral
-			| NullLiteral '''
+		''' Literal : INT_CONSTANT
+			| FLOAT_CONSTANT
+			| CHAR_CONSTANT
+			| STR_CONSTANT
+			| NULL ''' # OMITTED BOOLEAN lITERAL
 
 	def p_ParExpression(p):
 		''' ParExpression : L_PAREN Expression R_PAREN '''
@@ -562,37 +561,40 @@ def main():
 
 	###############################################################################
 
-	def p_EnumBody(p):
-		''' EnunmBody : 
-			| EnumBody InnerEnumBody '''
+#	def p_EnumBody(p):
+#		''' EnunmBody : 
+#			| EnumBody InnerEnumBody '''
+#
+#	def p_InnerEnumBody(p):  #TODO confusion
+#		''' InnerEnumBody : EnumConstants COMMA EnumBodyDeclarations
+#			| EnumConstants COMMA 
+#			| EnumConstants EnumBodyDeclarations
+#			| COMMA EnumBodyDeclarations
+#			| EnumConstants
+#			| COMMA
+#			| EnumBodyDeclarations '''
+#
+#
+#	def p_EnumConstants(p):
+#		''' EnumConstants : EnumConstant
+#			| EnumConstants COMMA EnumConstant '''
+#
+#	def p_EnumConstant(p):
+#		''' EnumConstant : Identifier Arguments ClassBody
+#			| Identifier Arguments
+#			| Identifier ClassBody 
+#			| Identifier '''
 
-	def p_InnerEnumBody(p):  #TODO confusion
-		''' InnerEnumBody : EnumConstants COMMA EnumBodyDeclarations
-			| EnumConstants COMMA 
-			| EnumConstants EnumBodyDeclarations
-			| COMMA EnumBodyDeclarations
-			| EnumConstants
-			| COMMA
-			| EnumBodyDeclarations '''
-
-
-	def p_EnumConstants(p):
-		''' EnumConstants : EnumConstant
-			| EnumConstants COMMA EnumConstant '''
-
-	def p_EnumConstant(p):
-		''' EnumConstant : Identifier Arguments ClassBody
-			| Identifier Arguments
-			| Identifier ClassBody 
-			| Identifier '''
-
-	def p_EnumBodyDeclarations(p):
-		''' EnumBodyDeclarations : SEMICOLON
-			| EnumBodyDeclarations ClassBodyDeclaration '''
+#	def p_EnumBodyDeclarations(p):
+#		''' EnumBodyDeclarations : STMT_TERMINATOR
+#			| EnumBodyDeclarations ClassBodyDeclaration ''' 
 
 	yacc.yacc()
-	inputfile = open(sys.argv[1],'r').read()
+	inputfile = open("../test/testLambda.java",'r').read()
+	inputfile+="\n"
 	print(yacc.parse(inputfile))
 	
 if __name__ == "__main__":
 	main()
+
+
