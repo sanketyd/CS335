@@ -8,40 +8,40 @@ def main():
 	tokens = lexer.Tokens()._get_tokens()
 	def p_Identifier(p):
 		'''Identifier : IDENTIFIER'''
-	
+
 	def p_QualifiedIdentifier(p):
 		'''QualifiedIdentifier : Identifier
-			| QualifiedIdentifier DOT Identifier'''  
+			| QualifiedIdentifier DOT Identifier'''
 	###########################################################################
 
 	def p_CompileUnit(p):
 		''' CompileUnit : PackageDeclaration
 			| ImportDeclarations STMT_TERMINATOR
 			| TypeDeclaration STMT_TERMINATOR'''
-	
+
 	def p_PackageDeclaration(p):
-		''' PackageDeclaration : 
+		''' PackageDeclaration :
 			| PACKAGE QualifiedIdentifier STMT_TERMINATOR'''
-	
+
 	def p_ImportDeclarations(p):
 		''' ImportDeclarations : ImportDeclaration
 			| ImportDeclarations ImportDeclaration'''
-	
+
 	def p_ImportDeclaration(p):
 		''' ImportDeclartion : SingleTypeImport
 			| TypeOnDemandImport'''
-	
+
 	def p_SingleTypeImport(p):
 		''' SingleTypeImport : IMPORT QualifiedIdentifier'''
-	
+
 	def p_TypeOnDemandImport(p):
 		''' TypeOnDemandImport : IMPORT QualifiedIdentifier DOT MULT'''
-	
+
 	def p_TypeDeclartion(p):
 		''' TypeDeclaration : ModifiedClassDeclaration STMT_TERMINATOR'''
-	
+
 	def p_ModifiedClassDeclaration(p):
-		''' ModifiedClassDeclaration : Modifiers ClassDeclaration 
+		''' ModifiedClassDeclaration : Modifiers ClassDeclaration
 			| ClassDeclaration'''
 	def p_ClassDeclaration(p):
 		''' ClassDeclaration : NormalClassDeclaration
@@ -52,47 +52,47 @@ def main():
 			| CLASS IDENTIFIER TypeParameters ClassBody
 			| CLASS IDENTIFIER TypeParameters EXTENDS Typelist ClassBody
 			| CLASS IDENTIFIER Extends TypeList ClassBody'''
-	
+
 	def p_EnumDeclaration(p):
 		''' EnumDeclaration : ENUM IDENTIFIER EnumBody '''
 
 #####################################################################################
 	def p_ArrSignList(p):
-		'''ArrSignList : 
+		'''ArrSignList :
 			| ArrSignList L_SQBR R_SQBR '''
 	def p_Types(p):
 		'''Types : Type ArrSignList'''
-	
+
 	def p_PrimType(p):
 		'''PrimType : BOOLEAN
 			| CHAR
-			| DOUBLE 
-			| BYTE 
-			| SHORT 
-			| INT 
-			| LONG 
+			| DOUBLE
+			| BYTE
+			| SHORT
+			| INT
+			| LONG
 			| VOID
 			| FLOAT '''
-	
+
 	def p_Type(p):
-		'''Type : PrimType 
+		'''Type : PrimType
 			| ReferenceType '''
-	
+
 	def p_ReferenceType(p):
-		'''ReferenceType : RefTypeComponent 
+		'''ReferenceType : RefTypeComponent
 			| ReferenceType DOT RefTypeComponent '''
-	
+
 	def p_RefTypeComponent(p):
-		'''RefTypeComponent : Identifier 
+		'''RefTypeComponent : Identifier
 			| Identifier TypeArguments '''
-	
+
 	def p_TypeArguments(p):
 		''' TypeArguments : LST TypeArgumentList GST'''
 
 	def p_TypeArgumentList(p):
-		''' TypeArgumentList : TypeArgument 
+		''' TypeArgumentList : TypeArgument
 			| TypeArgumentList COMMA TypeArgument '''
-	
+
 	def p_TypeArgument(p):
 		''' TypeArgument : ReferenceType
 			| ''' ## CONFUSION HERE
@@ -120,7 +120,7 @@ def main():
 	def p_TypeParameterList(p):
 		''' TypeParameterList : TypeParameter
 			| TypeParameterList COMMA TypeParameter '''
-	
+
 	def p_TypeParameter(p):
 		''' TypeParameter : Identifier
 			| Identifier EXTENDS Bound '''
@@ -138,7 +138,7 @@ def main():
 ##################################################################################
 
 	def p_ClassBody(p):   ##TODO check
-		''' ClassBody : 
+		''' ClassBody :
 			| ClassBody BLOCK_OPENER ClassBodyDeclarataion BLOCK_CLOSER '''
 
 	def p_ClassBodyDeclaration(p):
@@ -148,7 +148,7 @@ def main():
 			| ModifierList MemberDeclaration '''
 
 	def p_ModifierList(p):
-		''' ModifierList : Modifier 
+		''' ModifierList : Modifier
 			| ModifierList Modifier '''
 
 	def p_MemberDeclaration(p):
@@ -163,7 +163,7 @@ def main():
 		''' MethodOrFoeldDeclaration : Type Identifier MethodOrFieldRest '''
 
 	def p_MethodOrFieldRest(p):
-		''' MethodOrFieldRest : FieldDeclarationRest STMT_TERMINATOR	
+		''' MethodOrFieldRest : FieldDeclarationRest STMT_TERMINATOR
 			| MethodDeclaratorRest '''
 
 	def p_FieldDeclaration(p):
@@ -178,7 +178,7 @@ def main():
 			| FormalParameters ArrSignList THROWS QualifiedIdentifierList STMT_TERMINATOR
 			| FormalParameters ArrSignList Block
 			| FormalParameters ArrSignList THROWS QualifiedIdentifierList Block '''
-	
+
 	def p_ConstructorDeclaratorRest(p):
 		''' ConstructorDeclaratorRest : FormalParameters Block
 			| FormalParameters THROWS QualifiedIdentifierList Block '''
@@ -203,7 +203,7 @@ def main():
 		''' ConstantDeclaratorsRest : ConstantDeclaratorRest ConstantDeclaratorList'''
 
 	def p_ConstantDeclaratorList(p):
-		''' ConstantDeclaratorList : 
+		''' ConstantDeclaratorList :
 			| ConstantDeclaratorList COMMA ConstantDeclarator '''
 
 	def p_ConstantDeclaratorRest(p):
@@ -222,7 +222,7 @@ def main():
 		''' FormalParameterDecls : VariableModifierList Type FormalParameterDeclsRest '''
 
 	def p_VariableModifierList(p):
-		''' VariableModifierList : 
+		''' VariableModifierList :
 			| VariableModifierList VariableModifier '''
 
 	def p_VariableModifier(p):
@@ -251,7 +251,7 @@ def main():
 	def p_VariableInitializer(p):
 		''' VariableInitializer : ArrayInitializer
 			| Expression '''
-	
+
 	def p_ArrayInitializer(p):
 		''' ArrayInitializer : '''      #TODO
 
@@ -261,7 +261,7 @@ def main():
 		''' Block : BLOCK_OPENER BlockStatements BLOCK_CLOSER '''
 
 	def p_BlockStatements(p):
-		''' BlockStatements : 
+		''' BlockStatements :
 			| BlockStatements BlockStatement '''
 
 	def p_BlockStatement(p):
@@ -300,13 +300,13 @@ def main():
 
 	def p_StatementExpression(p):
 		''' StatementExpression : Expression '''
-	
+
 	###############################################################################
-	
+
 	def p_Catches(p):
 		''' Catches : CatchClause
 			| Catches CatchClause '''
-	
+
 	def p_CatchClause(p):
 		''' CatchClause : catch L_PAREN VariableModifierList CatchType Identifier R_PAREN Block '''
 
@@ -320,7 +320,7 @@ def main():
 	#################################################################################
 
 	def p_SwitchBlockStatementGroups(p):
-		''' SwitchBlockStatementGroups : 
+		''' SwitchBlockStatementGroups :
 			| SwitchBlockStatementGroups SwitchBlockStatementGroup '''
 
 	def p_SwitchBlockStatementGroup(p):
@@ -352,7 +352,7 @@ def main():
 		''' ForVarControlRest : ForVariableDeclaratorRest STMT_TERMINATOR STMT_TERMINATOR
 			| ForVariableDeclaratorRest STMT_TERMINATOR Expression STMT_TERMINATOR ForUpdate
 			| ForVariableDeclaratorRest STMT_TERMINATOR STMT_TERMINATOR ForUpdate
-			| ForVariableDeclaratorRest STMT_TERMINATOR Expression STMT_TERMINATOR 
+			| ForVariableDeclaratorRest STMT_TERMINATOR Expression STMT_TERMINATOR
 			| COLON Expression '''
 	def p_ForVariableDeclaratorRest(p):
 		''' ForVariableDeclaratorRest : ASSIGN VariableIntializer
@@ -371,14 +371,14 @@ def main():
 
 	def p_Expression(p):
 		''' Expression : Expression1
-			| Expression1 AssignmentOperator Expression1 
+			| Expression1 AssignmentOperator Expression1
 			| LambdaExpression '''
 	def p_LambdaExpression(p):
 		''' LambdaExpression : LambdaParameters LAMBDA_TOKEN LambdaBody'''
 
 	def _LambdaParameters(p):
 		''' LambdaParameters : Identifier
-			| L_PAREN R_PAREN 
+			| L_PAREN R_PAREN
 			| L_PAREN FormalParameters R_PAREN
 			| L_PAREN QualifieIdentifierList R_PAREN '''
 
@@ -410,9 +410,9 @@ def main():
 	def p_Expression2Rest(p):
 		''' Expression2Rest : InfixOpListExpression
 			| INSTANCEOF Type '''
-	
+
 	def p_InfixOpListExpression(p):
-		''' InfixOpListExpression : 
+		''' InfixOpListExpression :
 			| InfixOpListExpression InfixOp Expression3 '''
 
 	#####################################################################################
@@ -445,11 +445,11 @@ def main():
 			| Primary SelectorList PostfixOpList '''
 
 	def p_SelectorList(p):
-		''' SelectorList : 
+		''' SelectorList :
 			| SelectorList Selector '''
 
 	def p_PostfixOpList(p):
-		''' PostfixOpList : 
+		''' PostfixOpList :
 			| PostfixOpList PostfixOp '''
 
 	def p_PrefixOp(p):
@@ -469,17 +469,17 @@ def main():
 	def p_Primary(p):
 		''' Primary : Literal
 			| ParExpression
-			| THIS 
+			| THIS
 			| THIS Arguments
 			| SUPER SuperSuffix
 			| NEW Creator
-			| NonWildcardTypeArguments ExplicitGenericInvocationSuffix 
+			| NonWildcardTypeArguments ExplicitGenericInvocationSuffix
 			| NonWildcardTypeArguments THIS Arguments
-			| IdentifierDotList 
+			| IdentifierDotList
 			| IdentifierDotList IdentifierSuffix
 			| BasicType MultArrSign DOT CLASS
 			| VOID DOT CLASS '''
-	
+
 	def p_IdentifierDotList(p):
 		''' IdentifierDotList : Identifier
 			| IdentifierDotList DOT Identifier '''
@@ -497,19 +497,19 @@ def main():
 	def p_Arguments(p):
 		''' Arguments : L_PAREN R_PAREN
 			| L_PAREN ExpressionList R_PAREN '''
-	
+
 	def p_ExpressionList(p):
 		''' ExpressionList : Expression
 			| ExpressionList COMMA Expression '''
 
 	def p_SuperSuffix(p):
 		''' SuperSuffix : Arguments
-			| DOT Identifier 
+			| DOT Identifier
 			| DOT Identifier Arguments '''
 
-	def p_ExplicitGenericInvocationSuffix(p): 
+	def p_ExplicitGenericInvocationSuffix(p):
 		'''  ExplicitGenericInvocationSuffix : SUPER SuperSuffix
-			| Identifier Arguments ''' 
+			| Identifier Arguments '''
 
 	#################################################################################
 
@@ -524,7 +524,7 @@ def main():
 	def p_IdentifierTypeArgOrDiamond(p):
 		''' IdentifierTypeArgOrDiamond : Identifier TypeArgumentsOrDiamond
 			| Identifier '''
-	
+
 	def p_ClassCreatorRest(p):
 		''' ClassCreatorRest : Arguments Classbody
 			| Arguments '''
@@ -545,7 +545,7 @@ def main():
 			| DOT NEW InnerCreator '''
 
 	def p_InnerCreator(p):
-		''' InnerCreator : Identifier ClassCreatorRest 
+		''' InnerCreator : Identifier ClassCreatorRest
 			| Identifier NonWildCardTypeArgumentsOrDiamond ClassCreatorRest '''
 
 	def p_Selector(p):
@@ -562,12 +562,12 @@ def main():
 	###############################################################################
 
 #	def p_EnumBody(p):
-#		''' EnunmBody : 
+#		''' EnunmBody :
 #			| EnumBody InnerEnumBody '''
 #
 #	def p_InnerEnumBody(p):  #TODO confusion
 #		''' InnerEnumBody : EnumConstants COMMA EnumBodyDeclarations
-#			| EnumConstants COMMA 
+#			| EnumConstants COMMA
 #			| EnumConstants EnumBodyDeclarations
 #			| COMMA EnumBodyDeclarations
 #			| EnumConstants
@@ -582,18 +582,18 @@ def main():
 #	def p_EnumConstant(p):
 #		''' EnumConstant : Identifier Arguments ClassBody
 #			| Identifier Arguments
-#			| Identifier ClassBody 
+#			| Identifier ClassBody
 #			| Identifier '''
 
 #	def p_EnumBodyDeclarations(p):
 #		''' EnumBodyDeclarations : STMT_TERMINATOR
-#			| EnumBodyDeclarations ClassBodyDeclaration ''' 
+#			| EnumBodyDeclarations ClassBodyDeclaration '''
 
 	yacc.yacc()
 	inputfile = open("../test/testLambda.java",'r').read()
 	inputfile+="\n"
 	print(yacc.parse(inputfile))
-	
+
 if __name__ == "__main__":
 	main()
 
