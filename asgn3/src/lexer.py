@@ -5,7 +5,7 @@ import sys
 class Tokens(object):
     def __init__(self):
         self.reserved = self._get_reserved()
-        self.tokens = self._get_tokens()
+        self.tokens = self.get_tokens()
 
 
     def _get_types(self):
@@ -36,6 +36,7 @@ class Tokens(object):
                 'default'         : 'DEFAULT',
                 'do'              : 'DO',
                 'else'            : 'ELSE',
+                'enum'            : 'ENUM',
                 'extends'         : 'EXTENDS',
                 'final'           : 'FINAL',
                 'finally'         : 'FINALLY',
@@ -97,7 +98,10 @@ class Tokens(object):
                 'L_SHIFT',
                 'R_SHIFT',
                 'LSHIFTEQ',
-                'RSHIFTEQ'
+                'RSHIFTEQ',
+                # extras which we forgot to add before
+                'COLON',
+                'QUESTION'
                 ]
         return operators
 
@@ -138,7 +142,7 @@ class Tokens(object):
         return reserved
 
 
-    def _get_tokens(self):
+    def get_tokens(self):
         operators = self._get_operators()
         separators = self._get_separators()
         misc = self._get_misc_words()
@@ -147,97 +151,101 @@ class Tokens(object):
         return tokens
 
 
+################################ Rules for Tokens #######################################
+# Other Identifiers
+def t_FLOAT_CONSTANT(t):
+    r'\d*\.\d+'
+    t.value = float(t.value)
+    return t
+
+def t_INT_CONSTANT(t):
+    r'\d+'
+    t.value = int(t.value)
+    return t
+
+t_STR_CONSTANT = r'\"([^\\\n]|(\\.))*?\"' #[^\\\n]: Matches everything except \ and newline.
+                                          #(\\.): Anything with escape char
+t_CHAR_CONSTANT = r"\'([^\\\n]|(\\.))?\'"
+
+t_LAMBDA_TOKEN    = r'\->'
+
+# Separators
+t_STMT_TERMINATOR = r';'
+t_COMMA           = r','
+t_L_PAREN         = r'\('
+t_R_PAREN         = r'\)'
+t_BLOCK_OPENER    = r'\{'
+t_BLOCK_CLOSER    = r'\}'
+t_L_SQBR          = r'\['
+t_R_SQBR          = r'\]'
+
+# Operators
+t_EQUALS          = r'=='
+t_ASSIGN          = r'='
+t_GRT             = r'>'
+t_LST             = r'<'
+t_GEQ             = r'>='
+t_LEQ             = r'<='
+t_PLUS            = r'\+'
+t_MINUS           = r'\-'
+t_MULT            = r'\*'
+t_DIVIDE          = r'/'
+t_LOGICAL_AND     = r'&&'
+t_LOGICAL_OR      = r'\|\|'
+t_LOGICAL_NOT     = r'!'
+t_NOT_EQUAL       = r'!='
+t_BITWISE_AND     = r'&'
+t_BITWISE_OR      = r'\|'
+t_BITWISE_NOT     = r'~'
+t_BITWISE_XOR     = r'\^'
+t_MODULO          = r'%'
+t_INCREMENT       = r'\+\+'
+t_DECREMENT       = r'\-\-'
+t_DOT             = r'\.'
+t_INSTANCEOF      = r'instanceof'
+t_PLUSEQ          = r'\+= '
+t_MINUSEQ         = r'-='
+t_MULTEQ          = r'\*='
+t_DIVEQ           = r'/='
+t_MODEQ           = r'%='
+t_L_SHIFT         = r'<<'
+t_R_SHIFT         = r'>>'
+t_LSHIFTEQ        = r'<<='
+t_RSHIFTEQ        = r'>>='
+t_COLON           = r':'
+t_QUESTION        = r'\?'
+
+
+t_ignore = ' \t'
+
+def t_IDENTIFIER(t):
+    r'[a-zA-Z_][a-zA-Z_0-9]*'
+    t.type = toks.reserved.get(t.value,'IDENTIFIER')
+    return t
+
+def t_newline(t):
+    r'\n+'
+    t.lexer.lineno += len(t.value)
+
+def t_INLINE_COMMENT(t):
+    r'//.*'
+    pass
+    # return t
+
+def t_BLOCK_COMMENT(t):
+    r'/\*(.|\n)*?\*/'
+    t.lexer.lineno += t.value.count('\n')
+    pass
+    # return t
+
+def t_error(t):
+    print("Illegal Character '%s'" % t.value[0])
+    t.lexer.skip(1)
+
+
 def main():
     toks = Tokens()
-    tokens = toks._get_tokens()
-
-    ################################ Rules for Tokens #######################################
-    # Other Identifiers
-    def t_FLOAT_CONSTANT(t):
-        r'\d*\.\d+'
-        t.value = float(t.value)
-        return t
-
-    def t_INT_CONSTANT(t):
-        r'\d+'
-        t.value = int(t.value)
-        return t
-
-    t_STR_CONSTANT = r'\"([^\\\n]|(\\.))*?\"' #[^\\\n]: Matches everything except \ and newline.
-                                              #(\\.): Anything with escape char
-    t_CHAR_CONSTANT = r"\'([^\\\n]|(\\.))?\'"
-
-    t_LAMBDA_TOKEN    = r'\->'
-
-    # Separators
-    t_STMT_TERMINATOR = r';'
-    t_COMMA           = r','
-    t_L_PAREN         = r'\('
-    t_R_PAREN         = r'\)'
-    t_BLOCK_OPENER    = r'\{'
-    t_BLOCK_CLOSER    = r'\}'
-    t_L_SQBR          = r'\['
-    t_R_SQBR          = r'\]'
-
-    # Operators
-    t_EQUALS          = r'=='
-    t_ASSIGN          = r'='
-    t_GRT             = r'>'
-    t_LST             = r'<'
-    t_GEQ             = r'>='
-    t_LEQ             = r'<='
-    t_PLUS            = r'\+'
-    t_MINUS           = r'\-'
-    t_MULT            = r'\*'
-    t_DIVIDE          = r'/'
-    t_LOGICAL_AND     = r'&&'
-    t_LOGICAL_OR      = r'\|\|'
-    t_LOGICAL_NOT     = r'!'
-    t_NOT_EQUAL       = r'!='
-    t_BITWISE_AND     = r'&'
-    t_BITWISE_OR      = r'\|'
-    t_BITWISE_NOT     = r'~'
-    t_BITWISE_XOR     = r'\^'
-    t_MODULO          = r'%'
-    t_INCREMENT       = r'\+\+'
-    t_DECREMENT       = r'\-\-'
-    t_DOT             = r'\.'
-    t_INSTANCEOF      = r'instanceof'
-    t_PLUSEQ          = r'\+= '
-    t_MINUSEQ         = r'-='
-    t_MULTEQ          = r'\*='
-    t_DIVEQ           = r'/='
-    t_MODEQ           = r'%='
-    t_L_SHIFT         = r'<<'
-    t_R_SHIFT         = r'>>'
-    t_LSHIFTEQ        = r'<<='
-    t_RSHIFTEQ        = r'>>='
-
-
-    t_ignore = ' \t'
-
-    def t_IDENTIFIER(t):
-        r'[a-zA-Z_][a-zA-Z_0-9]*'
-        t.type = toks.reserved.get(t.value,'IDENTIFIER')
-        return t
-
-    def t_newline(t):
-        r'\n+'
-        t.lexer.lineno += len(t.value)
-
-    def t_INLINE_COMMENT(t):
-        r'//.*'
-        return t
-
-    def t_BLOCK_COMMENT(t):
-        r'/\*(.|\n)*?\*/'
-        t.lexer.lineno += t.value.count('\n')
-        return t
-
-    def t_error(t):
-        print("Illegal Character '%s'" % t.value[0])
-        t.lexer.skip(1)
-    #########################################################################################
+    tokens = toks.get_tokens()
 
     code = open(sys.argv[1],"r").read()
     # print(code)
