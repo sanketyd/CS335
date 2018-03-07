@@ -243,13 +243,14 @@ def t_error(t):
     t.lexer.skip(1)
 
 
-def main():
-    toks = Tokens()
-    tokens = toks.get_tokens()
+toks = Tokens()
+tokens = toks.get_tokens()
 
+lexer = lex.lex()
+
+def main():
     code = open(sys.argv[1],"r").read()
     # print(code)
-    lexer = lex.lex()
     lexer.input(code)
 
     tokenDict = dict()
