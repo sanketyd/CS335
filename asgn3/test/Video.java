@@ -1,5 +1,5 @@
-import java.util.*;
-public abstract class Video {
+import java.util;
+class Video {
 	double Play_Duraton;
 	Date Release_Date;
 	Video(double Play_Duration,Date Release_Date){
@@ -12,7 +12,6 @@ public abstract class Video {
 	void setDuration(double duration){
 		this.Play_Duraton = duration;
 	}
-	abstract Date getDate();
-	abstract void setDate(Date date);
-	
+	Date getDate();
+	void setDate(Date date);
 }
