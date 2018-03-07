@@ -6,18 +6,12 @@ import lexer
 
 def main():
     tokens = lexer.Tokens().get_tokens()
-    # print(tokens)
-    def p_Identifier(p):
-        '''Identifier : IDENTIFIER'''
-
-    def p_QualifiedIdentifier(p):
-        '''QualifiedIdentifier : Identifier
-            | QualifiedIdentifier DOT Identifier'''
-
     ###########################################################################
 
     def p_CompileUnit(p):
-        ''' CompileUnit : PackageDeclaration
+        ''' CompileUnit : PackageDeclaration ImportDeclarations TypeDeclaration
+            | PackageDeclaration TypeDeclaration
+            | ImportDeclarations TypeDeclaration
             | ImportDeclarations
             | TypeDeclaration
         '''
@@ -31,8 +25,15 @@ def main():
             | ImportDeclarations ImportDeclaration'''
 
     def p_ImportDeclaration(p):
-        ''' ImportDeclaration : SingleTypeImport
-            | TypeOnDemandImport'''
+        '''
+        ImportDeclaration : ImportType STMT_TERMINATOR
+        '''
+
+    def p_ImportType(p):
+        '''
+        ImportType : SingleTypeImport
+        | TypeOnDemandImport
+        '''
 
     def p_SingleTypeImport(p):
         ''' SingleTypeImport : IMPORT QualifiedIdentifier'''
@@ -41,7 +42,7 @@ def main():
         ''' TypeOnDemandImport : IMPORT QualifiedIdentifier DOT MULT'''
 
     def p_TypeDeclaration(p):
-        ''' TypeDeclaration : ClassDeclaration STMT_TERMINATOR'''
+        ''' TypeDeclaration : ClassDeclaration'''
 
     def p_ClassDeclaration(p):
         ''' ClassDeclaration : NormalClassDeclaration
@@ -56,7 +57,15 @@ def main():
     def p_EnumDeclaration(p):
         ''' EnumDeclaration : ENUM IDENTIFIER EnumBody '''
 
-#####################################################################################
+    #####################################################################################
+
+    def p_Identifier(p):
+        '''Identifier : IDENTIFIER'''
+
+    def p_QualifiedIdentifier(p):
+        '''QualifiedIdentifier : Identifier
+            | QualifiedIdentifier DOT Identifier'''
+
     def p_ArrSignList(p):
         '''ArrSignList :
             | ArrSignList L_SQBR R_SQBR '''
@@ -129,18 +138,17 @@ def main():
         ''' Bound : ReferenceType
             | Bound BITWISE_AND ReferenceType '''
 
-##################################################################################
+    ##################################################################################
 
     def p_Modifier(p):
         ''' Modifier : STATIC
             | ABSTRACT
             | FINAL '''
 
-##################################################################################
+    ##################################################################################
 
-    def p_ClassBody(p):   ##TODO check
-        ''' ClassBody :
-            | ClassBody BLOCK_OPENER ClassBodyDeclaration BLOCK_CLOSER '''
+    def p_ClassBody(p):
+        ''' ClassBody : BLOCK_OPENER ClassBodyDeclaration BLOCK_CLOSER '''
 
     def p_ClassBodyDeclaration(p):
         ''' ClassBodyDeclaration : STMT_TERMINATOR
@@ -204,7 +212,7 @@ def main():
         | QualifiedIdentifier COMMA QualifiedIdentifierList
         '''
 
-###########################################################################################
+    ###########################################################################################
 
     def p_ConstantDeclaratorsRest(p):
         ''' ConstantDeclaratorsRest : ConstantDeclaratorRest ConstantDeclaratorList'''
@@ -579,6 +587,7 @@ def main():
     def p_EnumBody(p):
         '''
         EnumBody : EnumBody InnerEnumBody
+        |
         '''
 
     def p_InnerEnumBody(p):
@@ -609,9 +618,9 @@ def main():
             print("Syntax Error in Input!!")
 
     parser = yacc.yacc()
-    inputfile = open("../test/testLambda.java",'r').read()
+    inputfile = open("../test/Video.java",'r').read()
     inputfile += "\n"
-    print(parser.parse(inputfile))
+    print(parser.parse(inputfile, debug=1))
 
 if __name__ == "__main__":
     main()
