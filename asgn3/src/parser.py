@@ -140,25 +140,30 @@ def main():
 
     ##################################################################################
 
-    def p_Modifier(p):
-        ''' Modifier : STATIC
-            | ABSTRACT
-            | FINAL '''
-
-    ##################################################################################
-
     def p_ClassBody(p):
-        ''' ClassBody : BLOCK_OPENER ClassBodyDeclaration BLOCK_CLOSER '''
+        ''' ClassBody : BLOCK_OPENER ClassBodyDeclarations BLOCK_CLOSER '''
+
+    def p_ClassDeclarations(p):
+        '''
+        ClassBodyDeclarations : ClassBodyDeclaration
+        | ClassBodyDeclarations ClassBodyDeclaration
+        '''
 
     def p_ClassBodyDeclaration(p):
         ''' ClassBodyDeclaration : STMT_TERMINATOR
             | STATIC Block
             | Block
+            | MemberDeclaration
             | ModifierList MemberDeclaration '''
 
     def p_ModifierList(p):
         ''' ModifierList : Modifier
             | ModifierList Modifier '''
+
+    def p_Modifier(p):
+        ''' Modifier : STATIC
+            | FINAL '''
+            # ABSTRACT
 
     def p_MemberDeclaration(p):
         ''' MemberDeclaration : MethodOrFieldDeclaration
@@ -173,6 +178,7 @@ def main():
 
     def p_MethodOrFieldRest(p):
         ''' MethodOrFieldRest : FieldDeclaration STMT_TERMINATOR
+            | STMT_TERMINATOR
             | MethodDeclaratorRest '''
 
     def p_FieldDeclaration(p):
@@ -308,7 +314,7 @@ def main():
             | CONTINUE STMT_TERMINATOR
             | CONTINUE Identifier STMT_TERMINATOR
             | RETURN STMT_TERMINATOR
-            | RETURN Identifier STMT_TERMINATOR
+            | RETURN QualifiedIdentifier STMT_TERMINATOR
             | THROW Expression STMT_TERMINATOR
             | TRY Block Catches
             | TRY Block FINALLY
