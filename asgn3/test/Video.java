@@ -7,7 +7,7 @@ class Video {
 		this.Release_Date = Release_Date ;
 	}
 	double getDuration(){
-		return this.Play_Duraton;
+		return Play_Duraton;
 	}
 	void setDuration(double duration){
 		this.Play_Duraton = duration;
