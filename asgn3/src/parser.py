@@ -624,7 +624,7 @@ def main():
             print("Syntax Error in Input!!")
 
     parser = yacc.yacc()
-    inputfile = open("../test/Video.java",'r').read()
+    inputfile = open(sys.argv[1],'r').read()
     inputfile += "\n"
     print(parser.parse(inputfile, debug=1))
 
