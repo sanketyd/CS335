@@ -745,7 +745,7 @@ def main():
         print("Synatx error in line: ", p.lineno)
 
     parser = yacc.yacc()
-    inputfile = open("../test/Video.java",'r').read()
+    inputfile = open(sys.argv[1],'r').read()
     inputfile += "\n"
     print(parser.parse(inputfile, debug=0))
     sys.stdout = open("out.html", 'w')
