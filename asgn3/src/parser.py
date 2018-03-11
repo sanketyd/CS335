@@ -551,9 +551,6 @@ def main():
             | InfixOpListExpression InfixOp Expression3 '''
         non_terminals.append(tuple(p.slice))
 
-    #####################################################################################
-
-
     def p_InfixOp(p):
         ''' InfixOp : LOGICAL_OR
             | LOGICAL_AND
@@ -680,13 +677,9 @@ def main():
         non_terminals.append(tuple(p.slice))
 
     def p_ArrayCreatorRest(p):
-        # TODO TODO TODO
-        # ''' ArrayCreatorRest : ArrSignList ArrayInitializer
-        # '''
         ''' ArrayCreatorRest : L_SQBR R_SQBR ArrSignList ArrayInitializer
             | L_SQBR Expression R_SQBR ArrExpressionList ArrSignList
         '''
-        # RULE:  [ (] {[]} ArrayInitializer  |  Expression ] {[ Expression ]} {[]})
         non_terminals.append(tuple(p.slice))
 
     def p_ArrExpressionList(p):
@@ -734,8 +727,7 @@ def main():
 
     def p_EnumBody(p):
         '''
-        EnumBody : EnumBody InnerEnumBody
-        |
+        EnumBody : BLOCK_OPENER InnerEnumBody BLOCK_CLOSER
         '''
         non_terminals.append(tuple(p.slice))
 
