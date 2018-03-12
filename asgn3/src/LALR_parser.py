@@ -6,6 +6,67 @@ import lexer
 
 tokens = lexer.tokens
 
+def p_Goal(p):
+    '''Goal : CompilationUnit'''
+
+def p_Literal(p):
+    ''' Literal : IntergerLiteral
+            | FloatingPointLiteral
+            | BooleanLiteral
+            | CharacterLiteral
+            | StringLiteral
+            | NullLiteral'''
+############################################################
+
+def p_Type(p):
+    ''' Type : PrimitiveType
+            | ReferenceType '''
+
+def p_PrimitiveType(p):
+    ''' PrimitiveType : NumericType
+            | BOOLEAN '''
+
+def p_NumericType(p):
+    ''' NumericType : IntegralType
+            | FloatingPointType'''
+
+def p_IntegralType(p):
+    ''' IntegralType : BYTE
+            | SHORT
+            | INT
+            | LONG
+            | CHAR '''
+
+def p_FloatingPointType(p):
+    ''' FloatingPointType : FLOAT
+            | DOUBLE'''
+
+def p_ReferenceType(p):
+    ''' ReferenceType : ArrayType
+            | ClassType'''
+
+def p_ClassType(p):
+    ''' ClassType : Name '''
+
+def p_ArrayType(p):
+    ''' ArrayType : PrimitiveType L_SQBR R_SQBR
+            | Name L_SQBR R_SQBR
+            | ArrayType L_SQBR R_SQBR '''
+
+###############################################################
+         
+def p_Name(p):
+    ''' Name : SimpleName
+            | QualifiedName'''
+
+def p_SimpleName(p):
+    ''' SimpleName : Identifier'''
+
+def p_QualifiedName(p):
+    ''' QualifiedName : Name DOT Identifier'''
+###############################################################
+
+##############################################################
 def p_ClassDeclaration(p):
     '''
     ClassDeclaration : Modifiers CLASS Identifier Super ClassBody
