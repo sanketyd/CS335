@@ -342,6 +342,252 @@ def p_Finally(p):
     FINALLY Block
     '''
 
+def p_Primary(p):
+    '''
+    Primary : PrimaryNoNewArray
+    | ArrayCreationExpression
+    '''
+
+def p_PrimaryNoNewArray(p):
+    '''
+    PrimaryNoNewArray : Literal
+    | THIS
+    | L_PAREN Expression R_PAREN
+    | ClassInstanceCreationExpression
+    | FieldAccess
+    | MethodInvocation
+    | ArrayAccess
+    '''
+
+def p_ClassInstanceCreationExpression(p):
+    '''
+    ClassInstanceCreationExpression : NEW ClassType L_PAREN R_PAREN
+    | NEW ClassType L_PAREN ArgumentList R_PAREN
+    '''
+
+def p_ArgumentList(p):
+    '''
+    ArgumentList : Expression
+    | ArgumentList COMMA Expression
+    '''
+
+def p_ArrayCreationExpression(p):
+    '''
+    ArrayCreationExpression : NEW PrimitiveType DimExprs Dims
+    | NEW PrimitiveType DimExprs
+    | new ClassOrInterfaceType DimExprs Dims
+    | new ClassOrInterfaceType DimExprs
+    '''
+
+def p_DimExprs(p):
+    '''
+    DimExprs : DimExpr
+    | DimExprs DimExpr
+    '''
+
+def p_DimExpr(p):
+    '''
+    DimExpr : L_SQBR Expression R_SQBR
+    '''
+
+def p_Dims(p):
+    '''
+    Dims : L_SQBR R_SQBR
+    | Dims L_SQBR R_SQBR
+    '''
+
+def p_FieldAccess(p):
+    '''
+    FieldAccess : Primary DOT Identifier
+    | SUPER DOT Identifier
+    '''
+
+def p_MethodInvocation(p):
+    '''
+    MethodInvocation : Name L_PAREN ArgumentList R_PAREN
+    | Name L_PAREN R_PAREN
+    | Primary DOT Identifier L_PAREN ArgumentList R_PAREN
+    | Primary DOT Identifier L_PAREN R_PAREN
+    | SUPER DOT Identifier L_PAREN ArgumentList R_PAREN
+    | SUPER DOT Identifier L_PAREN R_PAREN
+    '''
+
+def p_ArrayAccess(p):
+    '''
+    ArrayAccess : Name L_SQBR Expression R_SQBR
+    | PrimaryNoNewArray L_SQBR Expression R_SQBR
+    '''
+
+def p_PostfixExpression(p):
+    '''
+    PostfixExpression : Primary
+    | Name
+    | PostIncrementExpression
+    | PostDecrementExpression
+    '''
+
+def p_PostIncrementExpression(p):
+    '''
+    PostIncrementExpression : PostfixExpression INCREMENT
+    '''
+
+def p_PostDecrementExpression(p):
+    '''
+    PostDecrementExpression : PostfixExpression DECREMENT
+    '''
+
+def p_UnaryExpression(p):
+    '''
+    UnaryExpression : PreIncrementExpression
+    | PreIncrementExpression
+    | PLUS UnaryExpression
+    | MINUS UnaryExpression
+    | UnaryExpressionNotPlusMinus
+    '''
+
+def p_PreIncrementExpression(p):
+    '''
+    PreIncrementExpression : INCREMENT UnaryExpression
+    '''
+
+def p_PreDecrementExpression(p):
+    '''
+    PreDecrementExpression : DECREMENT UnaryExpression
+    '''
+
+def p_UnaryExpressionNotPlusMinus(p):
+    '''
+    UnaryExpressionNotPlusMinus : PostfixExpression
+    | BITWISE_NOT UnaryExpression
+    | NOT UnaryExpression
+    | CastExpression
+    '''
+
+def p_CastExpression(p):
+    '''
+    CastExpression : L_PAREN PrimitiveType Dims R_PAREN UnaryExpression
+    | L_PAREN PrimitiveType R_PAREN UnaryExpression
+    | L_PAREN Expression R_PAREN UnaryExpressionNotPlusMinus
+    | L_PAREN Name Dims R_PAREN UnaryExpressionNotPlusMinus
+    '''
+
+def p_MultiplicativeExpression(p):
+    '''
+    MultiplicativeExpression : UnaryExpression
+    | MultiplicativeExpression MULT UnaryExpression
+    | MultiplicativeExpression DIVIDE UnaryExpression
+    | MultiplicativeExpression MODULO UnaryExpression
+    '''
+
+def p_AdditiveExpression(p):
+    '''
+    AdditiveExpression : MultiplicativeExpression
+    | AdditiveExpression PLUS MultiplicativeExpression
+    | AdditiveExpression MINUS MultiplicativeExpression
+    '''
+
+def p_ShiftExpression(p):
+    '''
+    ShiftExpression : AdditiveExpression
+    | ShiftExpression L_SHIFT AdditiveExpression
+    | ShiftExpression R_SHIFT AdditiveExpression
+    '''
+    #Ek chod diya >>> wala
+
+def p_RelationalExpression(p):
+    '''
+    RelationalExpression : ShiftExpression
+    | RelationalExpression LST ShiftExpression
+    | RelationalExpression GRT ShiftExpression
+    | RelationalExpression LEQ ShiftExpression
+    | RelationalExpression GEQ ShiftExpression
+    | RelationalExpression INSTANCEOF ReferenceType
+    '''
+
+def p_EqualityExpression(p):
+    '''
+    EqualityExpression : RelationalExpression
+    | EqualityExpression EQUALS RelationalExpression
+    | EqualityExpression NOT_EQUAL RelationalExpression
+    '''
+
+def p_AndExpression(p):
+    '''
+    AndExpression : EqualityExpression
+    AndExpression BITWISE_AND EqualityExpression
+    '''
+
+def p_ExclusiveOrExpression(p):
+    '''
+    ExclusiveOrExpression : AndExpression
+    | ExclusiveOrExpression BITWISE_XOR AndExpression
+    '''
+
+def p_InclusiveOrExpression(p):
+    '''
+    InclusiveOrExpression : ExclusiveOrExpression
+    | InclusiveOrExpression BITWISE_OR ExclusiveOrExpression
+    '''
+
+def p_ConditionalAndExpression(p):
+    '''
+    ConditionalAndExpression : InclusiveOrExpression
+    | ConditionalAndExpression LOGICAL_AND InclusiveOrExpression
+    '''
+
+def p_ConditionalOrExpression(p):
+    '''
+    ConditionalOrExpression : ConditionalAndExpression
+    | ConditionalOrExpression BITWISE_OR ConditionalAndExpression
+    '''
+
+def p_ConditionalExpression(p):
+    '''
+    ConditionalExpression : ConditionalOrExpression
+    ConditionalOrExpression QUESTION Expression COLON ConditionalExpression
+    '''
+
+def p_AssignmentExpression(p):
+    '''
+    AssignmentExpression : ConditionalExpression
+    | Assignment
+    '''
+
+def p_Assignment(p):
+    '''
+    Assignment : LeftHandSide AssignmentOperator AssignmentExpression
+    '''
+
+def p_LeftHandSide(p):
+    '''
+    LeftHandSide : Name
+    | FieldAccess
+    | ArrayAccess
+    '''
+
+def p_AssignmentOperator(p):
+    '''
+    AssignmentOperator : ASSIGN
+    | MULTEQ
+    | DIVEQ
+    | MODEQ
+    | PLUSEQ
+    | MINUSEQ
+    | LSHIFTEQ
+    | RSHIFTEQ
+    '''
+    #To check if I missed something
+
+def p_Expression(p):
+    '''
+    Expression : AssignmentExpression
+    '''
+
+def p_ConstantExpression(p):
+    '''
+    ConstantExpression : Expression
+    '''
+
 def main():
     parser = yacc.yacc()
     inputfile = open(sys.argv[1],'r').read()
