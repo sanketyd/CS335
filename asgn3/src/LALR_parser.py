@@ -90,6 +90,7 @@ def p_CompilationUnit(p):
     | PackageDeclaration
     | ImportDeclarations
     | TypeDeclarations
+    |
     '''
 
 def p_ImportDeclarations(p):
@@ -219,12 +220,12 @@ def p_MethodDeclaration(p):
 
 def p_MethodHeader(p):
     '''
-    MethodHeader : Modifier Type MethodDeclarator Throws
-    | Modifier Type MethodDeclarator
+    MethodHeader : Modifiers Type MethodDeclarator Throws
+    | Modifiers Type MethodDeclarator
     | Type MethodDeclarator Throws
     | Type MethodDeclarator
-    | Modifier VOID MethodDeclarator Throws
-    | Modifier VOID MethodDeclarator
+    | Modifiers VOID MethodDeclarator Throws
+    | Modifiers VOID MethodDeclarator
     | VOID MethodDeclarator Throws
     | VOID MethodDeclarator
     '''
@@ -812,7 +813,7 @@ def main():
     parser = yacc.yacc()
     inputfile = open(sys.argv[1],'r').read()
     inputfile += "\n"
-    parser.parse(inputfile, debug=1)
+    parser.parse(inputfile, debug=0)
 
 
 if __name__ == "__main__":
