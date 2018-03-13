@@ -24,8 +24,8 @@ class Tokens(object):
 
     def _get_keywords(self):
         keywords = {
-                'abstract'        : 'ABSTRACT',
-                'assert'          : 'ASSERT',
+                # 'abstract'        : 'ABSTRACT',
+                # 'assert'          : 'ASSERT',
                 'break'           : 'BREAK',
                 'byte'            : 'BYTE',
                 'case'            : 'CASE',
@@ -36,7 +36,8 @@ class Tokens(object):
                 'default'         : 'DEFAULT',
                 'do'              : 'DO',
                 'else'            : 'ELSE',
-                'enum'            : 'ENUM',
+                # TODO
+                # 'enum'            : 'ENUM',
                 'extends'         : 'EXTENDS',
                 'final'           : 'FINAL',
                 'finally'         : 'FINALLY',
@@ -46,7 +47,7 @@ class Tokens(object):
                 'import'          : 'IMPORT',
                 'instanceof'      : 'INSTANCEOF',
               ##  'interface'       : 'INTERFACE',  removed interface
-                'native'          : 'NATIVE',
+                # 'native'          : 'NATIVE',
                 'new'             : 'NEW',
                 'package'         : 'PACKAGE',
               #  'private'         : 'PRIVATE',  removed Data Hiding
