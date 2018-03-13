@@ -5,10 +5,12 @@ import ply.yacc as yacc
 import lexer
 
 
+rules_store = []
 # Section 19.2
 
 def p_Goal(p):
     '''Goal : CompilationUnit'''
+    rules_store.append(p.slice)
 
 # Section 19.3
 
@@ -19,49 +21,68 @@ def p_Literal(p):
     | STR_CONSTANT
     | NULL
     '''
+    rules_store.append(p.slice)
     # TODO: bool constant
 
 # def p_IDENTIFIER(p):
     # '''
     # IDENTIFIER : IDENTIFIER
     # '''
+    # rules_store.append(p.slice)
 
 # Section 19.4
 
 def p_Type(p):
     ''' Type : PrimitiveType
-            | ReferenceType '''
+    | ReferenceType
+    '''
+    rules_store.append(p.slice)
 
 def p_PrimitiveType(p):
     ''' PrimitiveType : NumericType
-            | BOOLEAN '''
+    | BOOLEAN
+    '''
+    rules_store.append(p.slice)
 
 def p_NumericType(p):
     ''' NumericType : IntegralType
-            | FloatingPointType'''
+    | FloatingPointType
+    '''
+    rules_store.append(p.slice)
 
 def p_IntegralType(p):
     ''' IntegralType : BYTE
-            | SHORT
-            | INT
-            | LONG
-            | CHAR '''
+    | SHORT
+    | INT
+    | LONG
+    | CHAR
+    '''
+    rules_store.append(p.slice)
 
 def p_FloatingPointType(p):
     ''' FloatingPointType : FLOAT
-            | DOUBLE'''
+    | DOUBLE
+    '''
+    rules_store.append(p.slice)
 
 def p_ReferenceType(p):
     ''' ReferenceType : ArrayType
-            | ClassType'''
+    | ClassType
+    '''
+    rules_store.append(p.slice)
 
 def p_ClassType(p):
-    ''' ClassType : Name '''
+    '''
+    ClassType : Name
+    '''
+    rules_store.append(p.slice)
 
 def p_ArrayType(p):
     ''' ArrayType : PrimitiveType L_SQBR R_SQBR
-            | Name L_SQBR R_SQBR
-            | ArrayType L_SQBR R_SQBR '''
+    | Name L_SQBR R_SQBR
+    | ArrayType L_SQBR R_SQBR
+    '''
+    rules_store.append(p.slice)
 
 
 
@@ -69,13 +90,16 @@ def p_ArrayType(p):
 
 def p_Name(p):
     ''' Name : SimpleName
-            | QualifiedName'''
+    | QualifiedName'''
+    rules_store.append(p.slice)
 
 def p_SimpleName(p):
     ''' SimpleName : IDENTIFIER'''
+    rules_store.append(p.slice)
 
 def p_QualifiedName(p):
     ''' QualifiedName : Name DOT IDENTIFIER'''
+    rules_store.append(p.slice)
 
 
 
@@ -92,57 +116,67 @@ def p_CompilationUnit(p):
     | TypeDeclarations
     |
     '''
+    rules_store.append(p.slice)
 
 def p_ImportDeclarations(p):
     '''
     ImportDeclarations : ImportDeclaration
     | ImportDeclarations ImportDeclaration
     '''
+    rules_store.append(p.slice)
 
 def p_TypeDeclarations(p):
     '''
     TypeDeclarations : TypeDeclaration
     | TypeDeclarations TypeDeclaration
     '''
+    rules_store.append(p.slice)
 
 def p_PackageDeclaration(p):
     '''
     PackageDeclaration : PACKAGE Name STMT_TERMINATOR
     '''
+    rules_store.append(p.slice)
 
 def p_ImportDeclaration(p):
     '''
     ImportDeclaration : SingleTypeImportDeclaration
     | TypeImportOnDemandDeclaration
     '''
+    rules_store.append(p.slice)
 
 def p_SingleTypeImportDeclaration(p):
     '''
     SingleTypeImportDeclaration : IMPORT Name STMT_TERMINATOR
     '''
+    rules_store.append(p.slice)
 
 def p_TypeImportOnDemandDeclaration(p):
     '''
     TypeImportOnDemandDeclaration : IMPORT Name DOT MULT STMT_TERMINATOR
     '''
+    rules_store.append(p.slice)
 
 def p_TypeDeclaration(p):
     '''
     TypeDeclaration : ClassDeclaration
     | STMT_TERMINATOR
     '''
+    rules_store.append(p.slice)
 
 def p_Modifiers(p):
     '''
     Modifiers : Modifier
     | Modifiers Modifier
     '''
+    rules_store.append(p.slice)
 
 def p_Modifier(p):
     '''
     Modifier : STATIC
     | FINAL
     '''
+    rules_store.append(p.slice)
 # Section 19.8
 
 def p_ClassDeclaration(p):
@@ -152,23 +186,27 @@ def p_ClassDeclaration(p):
     | CLASS IDENTIFIER Super ClassBody
     | CLASS IDENTIFIER ClassBody
     '''
+    rules_store.append(p.slice)
 
 def p_Super(p):
     '''
     Super : EXTENDS ClassType
     '''
+    rules_store.append(p.slice)
 
 def p_ClassBody(p):
     '''
     ClassBody : BLOCK_OPENER BLOCK_CLOSER
     | BLOCK_OPENER ClassBodyDeclarations BLOCK_CLOSER
     '''
+    rules_store.append(p.slice)
 
 def p_ClassBodyDeclarations(p):
     '''
     ClassBodyDeclarations : ClassBodyDeclaration
     | ClassBodyDeclarations ClassBodyDeclaration
     '''
+    rules_store.append(p.slice)
 
 def p_ClassBodyDeclaration(p):
     '''
@@ -176,47 +214,55 @@ def p_ClassBodyDeclaration(p):
     | ConstructorDeclaration
     | StaticInitializer
     '''
+    rules_store.append(p.slice)
 
 def p_ClassMemberDeclaration(p):
     '''
     ClassMemberDeclaration : FieldDeclaration
     | MethodDeclaration
     '''
+    rules_store.append(p.slice)
 
 def p_FieldDeclaration(p):
     '''
     FieldDeclaration : Modifiers Type VariableDeclarators STMT_TERMINATOR
     | Type VariableDeclarators STMT_TERMINATOR
     '''
+    rules_store.append(p.slice)
 
 def p_VariableDeclarators(p):
     '''
     VariableDeclarators : VariableDeclarator
     | VariableDeclarators COMMA VariableDeclarator
     '''
+    rules_store.append(p.slice)
 
 def p_VariableDeclarator(p):
     '''
     VariableDeclarator : VariableDeclaratorId
     | VariableDeclaratorId ASSIGN VariableInitializer
     '''
+    rules_store.append(p.slice)
 
 def p_VariableDeclaratorId(p):
     '''
     VariableDeclaratorId : IDENTIFIER
     | VariableDeclaratorId L_SQBR R_SQBR
     '''
+    rules_store.append(p.slice)
 
 def p_VariableInitializer(p):
     '''
     VariableInitializer : Expression
     | ArrayInitializer
     '''
+    rules_store.append(p.slice)
 
 def p_MethodDeclaration(p):
     '''
     MethodDeclaration : MethodHeader MethodBody
     '''
+    rules_store.append(p.slice)
 
 def p_MethodHeader(p):
     '''
@@ -229,45 +275,53 @@ def p_MethodHeader(p):
     | VOID MethodDeclarator Throws
     | VOID MethodDeclarator
     '''
+    rules_store.append(p.slice)
 
 def p_MethodDeclarator(p):
     '''
     MethodDeclarator : IDENTIFIER L_PAREN R_PAREN
     | IDENTIFIER L_PAREN FormalParameterList R_PAREN
     '''
+    rules_store.append(p.slice)
 
 def p_FormalParametersList(p):
     '''
     FormalParameterList : FormalParameter
     | FormalParameterList COMMA FormalParameter
     '''
+    rules_store.append(p.slice)
 
 def p_FormalParameter(p):
     '''
     FormalParameter : Type VariableDeclaratorId
     '''
+    rules_store.append(p.slice)
 
 def p_Throws(p):
     '''
     Throws : THROWS ClassTypeList
     '''
+    rules_store.append(p.slice)
 
 def p_ClassTypeList(p):
     '''
     ClassTypeList : ClassType
     | ClassTypeList COMMA ClassType
     '''
+    rules_store.append(p.slice)
 
 def p_MethodBody(p):
     '''
     MethodBody : Block
     | STMT_TERMINATOR
     '''
+    rules_store.append(p.slice)
 
 def p_StaticInitializer(p):
     '''
     StaticInitializer : STATIC Block
     '''
+    rules_store.append(p.slice)
 
 def p_ConstructorDeclaration(p):
     '''
@@ -276,12 +330,14 @@ def p_ConstructorDeclaration(p):
     | ConstructorDeclarator Throws ConstructorBody
     | ConstructorDeclarator ConstructorBody
     '''
+    rules_store.append(p.slice)
 
 def p_ConstructorDeclarator(p):
     '''
     ConstructorDeclarator : SimpleName L_PAREN FormalParameterList R_PAREN
     | SimpleName L_PAREN R_PAREN
     '''
+    rules_store.append(p.slice)
 
 def p_ConstructorBody(p):
     '''
@@ -290,6 +346,7 @@ def p_ConstructorBody(p):
     | BLOCK_OPENER BlockStatements BLOCK_CLOSER
     | BLOCK_OPENER BLOCK_CLOSER
     '''
+    rules_store.append(p.slice)
 
 def p_ExplicitConstructorInvocation(p):
     '''
@@ -298,6 +355,7 @@ def p_ExplicitConstructorInvocation(p):
     | SUPER L_PAREN ArgumentList R_PAREN STMT_TERMINATOR
     | SUPER L_PAREN R_PAREN STMT_TERMINATOR
     '''
+    rules_store.append(p.slice)
 
 # Section 19.9 is about Interfaces
 
@@ -307,12 +365,14 @@ def p_ArrayInitializer(p):
     ArrayInitializer : BLOCK_OPENER VariableInitializers BLOCK_CLOSER
     | BLOCK_OPENER BLOCK_CLOSER
     '''
+    rules_store.append(p.slice)
 
 def p_VariableInitializers(p):
     '''
     VariableInitializers : VariableInitializer
     | VariableInitializers COMMA VariableInitializer
     '''
+    rules_store.append(p.slice)
 
 # Section 19.11
 def p_Block(p):
@@ -320,28 +380,33 @@ def p_Block(p):
     Block : BLOCK_OPENER BLOCK_CLOSER
     | BLOCK_OPENER BlockStatements BLOCK_CLOSER
     '''
+    rules_store.append(p.slice)
 
 def p_BlockStatements(p):
     '''
     BlockStatements : BlockStatement
     | BlockStatements BlockStatement
     '''
+    rules_store.append(p.slice)
 
 def p_BlockStatement(p):
     '''
     BlockStatement : LocalVariableDeclarationStatement
     | Statement
     '''
+    rules_store.append(p.slice)
 
 def p_LocalVariableDeclarationStatement(p):
     '''
     LocalVariableDeclarationStatement : LocalVariableDeclaration STMT_TERMINATOR
     '''
+    rules_store.append(p.slice)
 
 def p_LocalVariableDeclaration(p):
     '''
     LocalVariableDeclaration : Type VariableDeclarators
     '''
+    rules_store.append(p.slice)
 
 def p_Statement(p):
     '''
@@ -352,6 +417,7 @@ def p_Statement(p):
     | WhileStatement
     | ForStatement
     '''
+    rules_store.append(p.slice)
 
 def p_StatementNoShortIf(p):
     '''
@@ -361,6 +427,7 @@ def p_StatementNoShortIf(p):
     | WhileStatementNoShortIf
     | ForStatementNoShortIf
     '''
+    rules_store.append(p.slice)
 
 def p_StatementWithoutTrailingSubstatement(p):
     '''
@@ -375,26 +442,31 @@ def p_StatementWithoutTrailingSubstatement(p):
     | ThrowStatement
     | TryStatement
     '''
+    rules_store.append(p.slice)
 
 def p_EmptyStatement(p):
     '''
     EmptyStatement : STMT_TERMINATOR
     '''
+    rules_store.append(p.slice)
 
 def p_LabeledStatement(p):
     '''
     LabeledStatement : IDENTIFIER COLON Statement
     '''
+    rules_store.append(p.slice)
 
 def p_LabeledStatementNoShortIf(p):
     '''
     LabeledStatementNoShortIf : IDENTIFIER COLON StatementNoShortIf
     '''
+    rules_store.append(p.slice)
 
 def p_ExpressionStatement(p):
     '''
     ExpressionStatement : StatementExpression STMT_TERMINATOR
     '''
+    rules_store.append(p.slice)
 
 def p_StatementExpression(p):
     '''
@@ -406,26 +478,31 @@ def p_StatementExpression(p):
     | MethodInvocation
     | ClassInstanceCreationExpression
     '''
+    rules_store.append(p.slice)
 
 def p_IfThenStatement(p):
     '''
     IfThenStatement : IF L_PAREN Expression R_PAREN Statement
     '''
+    rules_store.append(p.slice)
 
 def p_IfThenElseStatement(p):
     '''
     IfThenElseStatement : IF L_PAREN Expression R_PAREN StatementNoShortIf ELSE Statement
     '''
+    rules_store.append(p.slice)
 
 def p_IfThenElseStatementNoShortIf(p):
     '''
     IfThenElseStatementNoShortIf : IF L_PAREN Expression R_PAREN StatementNoShortIf ELSE StatementNoShortIf
     '''
+    rules_store.append(p.slice)
 
 def p_SwitchStatement(p):
     '''
     SwitchStatement : SWITCH L_PAREN Expression R_PAREN SwitchBlock
     '''
+    rules_store.append(p.slice)
 
 def p_SwitchBlock(p):
     '''
@@ -434,44 +511,52 @@ def p_SwitchBlock(p):
     | BLOCK_OPENER SwitchBlockStatementGroups BLOCK_CLOSER
     | BLOCK_OPENER SwitchLabels BLOCK_CLOSER
     '''
+    rules_store.append(p.slice)
 
 def p_SwitchBlockStatementGroups(p):
     '''
     SwitchBlockStatementGroups : SwitchBlockStatementGroup
     | SwitchBlockStatementGroups SwitchBlockStatementGroup
     '''
+    rules_store.append(p.slice)
 
 def p_SwitchBlockStatementGroup(p):
     '''
     SwitchBlockStatementGroup : SwitchLabels BlockStatements
     '''
+    rules_store.append(p.slice)
 
 def p_SwitchLabels(p):
     '''
     SwitchLabels : SwitchLabel
     | SwitchLabels SwitchLabel
     '''
+    rules_store.append(p.slice)
 
 def p_SwitchLabel(p):
     '''
     SwitchLabel : CASE ConstantExpression COLON
     | DEFAULT COLON
     '''
+    rules_store.append(p.slice)
 
 def p_WhileStatement(p):
     '''
     WhileStatement : WHILE L_PAREN Expression R_PAREN Statement
     '''
+    rules_store.append(p.slice)
 
 def p_WhileStatementNoShortIf(p):
     '''
     WhileStatementNoShortIf : WHILE L_PAREN Expression R_PAREN StatementNoShortIf
     '''
+    rules_store.append(p.slice)
 
 def p_DoStatement(p):
     '''
     DoStatement : DO Statement WHILE L_PAREN Expression R_PAREN STMT_TERMINATOR
     '''
+    rules_store.append(p.slice)
 
 def p_ForStatement(p):
     '''
@@ -484,6 +569,7 @@ def p_ForStatement(p):
     | FOR L_PAREN STMT_TERMINATOR STMT_TERMINATOR ForUpdate R_PAREN Statement
     | FOR L_PAREN STMT_TERMINATOR STMT_TERMINATOR R_PAREN Statement
     '''
+    rules_store.append(p.slice)
 
 def p_ForStatementNoShortIf(p):
     '''
@@ -496,46 +582,54 @@ def p_ForStatementNoShortIf(p):
     | FOR L_PAREN STMT_TERMINATOR STMT_TERMINATOR ForUpdate R_PAREN StatementNoShortIf
     | FOR L_PAREN STMT_TERMINATOR STMT_TERMINATOR R_PAREN StatementNoShortIf
     '''
+    rules_store.append(p.slice)
 
 def p_ForInit(p):
     '''
     ForInit : StatementExpressionList
     | LocalVariableDeclaration
     '''
+    rules_store.append(p.slice)
 
 def p_ForUpdate(p):
     '''
     ForUpdate : StatementExpressionList
     '''
+    rules_store.append(p.slice)
 
 def p_StatementExpressionList(p):
     '''
     StatementExpressionList : StatementExpression
     | StatementExpressionList COMMA StatementExpression
     '''
+    rules_store.append(p.slice)
 
 def p_BreakStatement(p):
     '''
     BreakStatement : BREAK IDENTIFIER STMT_TERMINATOR
     | BREAK STMT_TERMINATOR
     '''
+    rules_store.append(p.slice)
 
 def p_ContinueStatement(p):
     '''
     ContinueStatement : CONTINUE IDENTIFIER STMT_TERMINATOR
     | CONTINUE STMT_TERMINATOR
     '''
+    rules_store.append(p.slice)
 
 def p_ReturnStatement(p):
     '''
     ReturnStatement : RETURN Expression STMT_TERMINATOR
     | RETURN STMT_TERMINATOR
     '''
+    rules_store.append(p.slice)
 
 def p_ThrowStatement(p):
     '''
     ThrowStatement : THROW Expression STMT_TERMINATOR
     '''
+    rules_store.append(p.slice)
 
 def p_TryStatement(p):
     '''
@@ -543,22 +637,26 @@ def p_TryStatement(p):
     | TRY Block Catches Finally
     | TRY Block Finally
     '''
+    rules_store.append(p.slice)
 
 def p_Catches(p):
     '''
     Catches : CatchClause
     | Catches CatchClause
     '''
+    rules_store.append(p.slice)
 
 def p_CatchClause(p):
     '''
     CatchClause : CATCH L_PAREN FormalParameter R_PAREN Block
     '''
+    rules_store.append(p.slice)
 
 def p_Finally(p):
     '''
     Finally : FINALLY Block
     '''
+    rules_store.append(p.slice)
 
 
 # Section 19.12
@@ -568,6 +666,7 @@ def p_Primary(p):
     Primary : PrimaryNoNewArray
     | ArrayCreationExpression
     '''
+    rules_store.append(p.slice)
 
 def p_PrimaryNoNewArray(p):
     '''
@@ -579,18 +678,21 @@ def p_PrimaryNoNewArray(p):
     | MethodInvocation
     | ArrayAccess
     '''
+    rules_store.append(p.slice)
 
 def p_ClassInstanceCreationExpression(p):
     '''
     ClassInstanceCreationExpression : NEW ClassType L_PAREN R_PAREN
     | NEW ClassType L_PAREN ArgumentList R_PAREN
     '''
+    rules_store.append(p.slice)
 
 def p_ArgumentList(p):
     '''
     ArgumentList : Expression
     | ArgumentList COMMA Expression
     '''
+    rules_store.append(p.slice)
 
 def p_ArrayCreationExpression(p):
     '''
@@ -599,29 +701,34 @@ def p_ArrayCreationExpression(p):
     | NEW ClassType DimExprs Dims
     | NEW ClassType DimExprs
     '''
+    rules_store.append(p.slice)
 
 def p_DimExprs(p):
     '''
     DimExprs : DimExpr
     | DimExprs DimExpr
     '''
+    rules_store.append(p.slice)
 
 def p_DimExpr(p):
     '''
     DimExpr : L_SQBR Expression R_SQBR
     '''
+    rules_store.append(p.slice)
 
 def p_Dims(p):
     '''
     Dims : L_SQBR R_SQBR
     | Dims L_SQBR R_SQBR
     '''
+    rules_store.append(p.slice)
 
 def p_FieldAccess(p):
     '''
     FieldAccess : Primary DOT IDENTIFIER
     | SUPER DOT IDENTIFIER
     '''
+    rules_store.append(p.slice)
 
 def p_MethodInvocation(p):
     '''
@@ -632,12 +739,14 @@ def p_MethodInvocation(p):
     | SUPER DOT IDENTIFIER L_PAREN ArgumentList R_PAREN
     | SUPER DOT IDENTIFIER L_PAREN R_PAREN
     '''
+    rules_store.append(p.slice)
 
 def p_ArrayAccess(p):
     '''
     ArrayAccess : Name L_SQBR Expression R_SQBR
     | PrimaryNoNewArray L_SQBR Expression R_SQBR
     '''
+    rules_store.append(p.slice)
 
 def p_PostfixExpression(p):
     '''
@@ -646,16 +755,19 @@ def p_PostfixExpression(p):
     | PostIncrementExpression
     | PostDecrementExpression
     '''
+    rules_store.append(p.slice)
 
 def p_PostIncrementExpression(p):
     '''
     PostIncrementExpression : PostfixExpression INCREMENT
     '''
+    rules_store.append(p.slice)
 
 def p_PostDecrementExpression(p):
     '''
     PostDecrementExpression : PostfixExpression DECREMENT
     '''
+    rules_store.append(p.slice)
 
 def p_UnaryExpression(p):
     '''
@@ -665,16 +777,19 @@ def p_UnaryExpression(p):
     | MINUS UnaryExpression
     | UnaryExpressionNotPlusMinus
     '''
+    rules_store.append(p.slice)
 
 def p_PreIncrementExpression(p):
     '''
     PreIncrementExpression : INCREMENT UnaryExpression
     '''
+    rules_store.append(p.slice)
 
 def p_PreDecrementExpression(p):
     '''
     PreDecrementExpression : DECREMENT UnaryExpression
     '''
+    rules_store.append(p.slice)
 
 def p_UnaryExpressionNotPlusMinus(p):
     '''
@@ -683,6 +798,7 @@ def p_UnaryExpressionNotPlusMinus(p):
     | LOGICAL_NOT UnaryExpression
     | CastExpression
     '''
+    rules_store.append(p.slice)
 
 def p_CastExpression(p):
     '''
@@ -691,6 +807,7 @@ def p_CastExpression(p):
     | L_PAREN Expression R_PAREN UnaryExpressionNotPlusMinus
     | L_PAREN Name Dims R_PAREN UnaryExpressionNotPlusMinus
     '''
+    rules_store.append(p.slice)
 
 def p_MultiplicativeExpression(p):
     '''
@@ -699,6 +816,7 @@ def p_MultiplicativeExpression(p):
     | MultiplicativeExpression DIVIDE UnaryExpression
     | MultiplicativeExpression MODULO UnaryExpression
     '''
+    rules_store.append(p.slice)
 
 def p_AdditiveExpression(p):
     '''
@@ -706,6 +824,7 @@ def p_AdditiveExpression(p):
     | AdditiveExpression PLUS MultiplicativeExpression
     | AdditiveExpression MINUS MultiplicativeExpression
     '''
+    rules_store.append(p.slice)
 
 def p_ShiftExpression(p):
     '''
@@ -713,6 +832,7 @@ def p_ShiftExpression(p):
     | ShiftExpression L_SHIFT AdditiveExpression
     | ShiftExpression R_SHIFT AdditiveExpression
     '''
+    rules_store.append(p.slice)
 
 def p_RelationalExpression(p):
     '''
@@ -723,6 +843,7 @@ def p_RelationalExpression(p):
     | RelationalExpression GEQ ShiftExpression
     | RelationalExpression INSTANCEOF ReferenceType
     '''
+    rules_store.append(p.slice)
 
 def p_EqualityExpression(p):
     '''
@@ -730,53 +851,62 @@ def p_EqualityExpression(p):
     | EqualityExpression EQUALS RelationalExpression
     | EqualityExpression NOT_EQUAL RelationalExpression
     '''
+    rules_store.append(p.slice)
 
 def p_AndExpression(p):
     '''
     AndExpression : EqualityExpression
     | AndExpression BITWISE_AND EqualityExpression
     '''
+    rules_store.append(p.slice)
 
 def p_ExclusiveOrExpression(p):
     '''
     ExclusiveOrExpression : AndExpression
     | ExclusiveOrExpression BITWISE_XOR AndExpression
     '''
+    rules_store.append(p.slice)
 
 def p_InclusiveOrExpression(p):
     '''
     InclusiveOrExpression : ExclusiveOrExpression
     | InclusiveOrExpression BITWISE_OR ExclusiveOrExpression
     '''
+    rules_store.append(p.slice)
 
 def p_ConditionalAndExpression(p):
     '''
     ConditionalAndExpression : InclusiveOrExpression
     | ConditionalAndExpression LOGICAL_AND InclusiveOrExpression
     '''
+    rules_store.append(p.slice)
 
 def p_ConditionalOrExpression(p):
     '''
     ConditionalOrExpression : ConditionalAndExpression
     | ConditionalOrExpression LOGICAL_OR ConditionalAndExpression
     '''
+    rules_store.append(p.slice)
 
 def p_ConditionalExpression(p):
     '''
     ConditionalExpression : ConditionalOrExpression
     | ConditionalOrExpression QUESTION Expression COLON ConditionalExpression
     '''
+    rules_store.append(p.slice)
 
 def p_AssignmentExpression(p):
     '''
     AssignmentExpression : ConditionalExpression
     | Assignment
     '''
+    rules_store.append(p.slice)
 
 def p_Assignment(p):
     '''
     Assignment : LeftHandSide AssignmentOperator AssignmentExpression
     '''
+    rules_store.append(p.slice)
 
 def p_LeftHandSide(p):
     '''
@@ -784,6 +914,7 @@ def p_LeftHandSide(p):
     | FieldAccess
     | ArrayAccess
     '''
+    rules_store.append(p.slice)
 
 def p_AssignmentOperator(p):
     '''
@@ -796,17 +927,47 @@ def p_AssignmentOperator(p):
     | LSHIFTEQ
     | RSHIFTEQ
     '''
+    rules_store.append(p.slice)
     #To check if I missed something
 
 def p_Expression(p):
     '''
     Expression : AssignmentExpression
     '''
+    rules_store.append(p.slice)
 
 def p_ConstantExpression(p):
     '''
     ConstantExpression : Expression
     '''
+    rules_store.append(p.slice)
+
+def p_error(p):
+    print("Syntax Error in line %d" %(p.lineno))
+
+def right_derrivative(rules_store):
+    # some html boilerplate
+    print("<head><title> Parser for JAVA </title></head>")
+    print("<body style='padding: 20px'> <h1> Rightmost Derrivation </h1> <hr>")
+    for rule in rules_store[::-1]:
+        print("<p>")
+        print(str(rule[0]) + "&emsp;-->&emsp;", end="")
+        flag = False
+        print_list = []
+        for symbol in rule[:0:-1]:
+            if str(type(symbol)) == "<class 'ply.yacc.YaccSymbol'>":
+                if not flag:
+                    print_list.append("<span style='color: red; font-weight: bold'>" + str(symbol) + "</span>")
+                    flag = True
+                else:
+                    print_list.append(str(symbol))
+            else:
+                print_list.append("<span style='color: blue'>" + str(symbol.value) + "</span>")
+        # print it in reverse now
+        for t in print_list[::-1]:
+            print(t, end="&emsp;")
+        print("</p>")
+    print("</body>")
 
 def main():
     tokens = lexer.tokens
@@ -814,6 +975,8 @@ def main():
     inputfile = open(sys.argv[1],'r').read()
     inputfile += "\n"
     parser.parse(inputfile, debug=0)
+    # print(rules_store)
+    right_derrivative(rules_store)
 
 
 if __name__ == "__main__":
