@@ -24,7 +24,6 @@ class Tokens(object):
 
     def _get_keywords(self):
         keywords = {
-                # 'abstract'        : 'ABSTRACT',
                 # 'assert'          : 'ASSERT',
                 'break'           : 'BREAK',
                 'byte'            : 'BYTE',
@@ -47,12 +46,8 @@ class Tokens(object):
                 'import'          : 'IMPORT',
                 'instanceof'      : 'INSTANCEOF',
               ##  'interface'       : 'INTERFACE',  removed interface
-                # 'native'          : 'NATIVE',
                 'new'             : 'NEW',
                 'package'         : 'PACKAGE',
-              #  'private'         : 'PRIVATE',  removed Data Hiding
-              #  'protected'       : 'PROTECTED',
-              #  'public'          : 'PUBLIC',
                 'return'          : 'RETURN',
                 'static'          : 'STATIC',
                 'super'           : 'SUPER',
@@ -102,7 +97,7 @@ class Tokens(object):
                 'RSHIFTEQ',
                 # extras which we forgot to add before
                 'COLON',
-                'QUESTION'
+                'QUESTION',
                 ]
         return operators
 
@@ -116,7 +111,9 @@ class Tokens(object):
                 'BLOCK_OPENER',
                 'BLOCK_CLOSER',
                 'L_SQBR',
-                'R_SQBR'
+                'R_SQBR',
+                'GENERIC_START',
+                'GENERIC_END'
                 ]
         return separators
 
@@ -179,6 +176,8 @@ t_BLOCK_OPENER    = r'\{'
 t_BLOCK_CLOSER    = r'\}'
 t_L_SQBR          = r'\['
 t_R_SQBR          = r'\]'
+t_GENERIC_START     = r'<\?'
+t_GENERIC_END       = r'\?>'
 
 # Operators
 t_EQUALS          = r'=='
