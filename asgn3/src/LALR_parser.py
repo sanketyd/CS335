@@ -24,11 +24,6 @@ def p_Literal(p):
     rules_store.append(p.slice)
     # TODO: bool constant
 
-# def p_IDENTIFIER(p):
-    # '''
-    # IDENTIFIER : IDENTIFIER
-    # '''
-    # rules_store.append(p.slice)
 
 # Section 19.4
 
@@ -67,6 +62,7 @@ def p_FloatingPointType(p):
 
 def p_ReferenceType(p):
     ''' ReferenceType : ArrayType
+    | GenericType
     | ClassType
     '''
     rules_store.append(p.slice)
@@ -84,7 +80,11 @@ def p_ArrayType(p):
     '''
     rules_store.append(p.slice)
 
-
+def p_GenericType(p):
+    '''
+    GenericType : Name GENERIC_START Name GENERIC_END
+    '''
+    rules_store.append(p.slice)
 
 # Section 19.5
 
@@ -700,6 +700,8 @@ def p_ArrayCreationExpression(p):
     | NEW PrimitiveType DimExprs
     | NEW ClassType DimExprs Dims
     | NEW ClassType DimExprs
+    | NEW GenericType DimExprs Dims
+    | NEW GenericType DimExprs
     '''
     rules_store.append(p.slice)
 
@@ -945,29 +947,50 @@ def p_ConstantExpression(p):
 def p_error(p):
     print("Syntax Error in line %d" %(p.lineno))
 
-def right_derrivative(rules_store):
-    # some html boilerplate
+
+def format_print(LHS, RHS, index):
+    print("<p>")
+    for i in range(len(LHS)):
+        if i == index:
+            print("<span style='color:red; font-weight:bold'>" + str(LHS[i]) + "</span>")
+        else:
+            if str(type(LHS[i])) == "<class 'ply.yacc.YaccSymbol'>":
+                print(str(LHS[i]), end=" ")
+            else:
+                print("<span style='color:blue'>" + str(LHS[i].value) + "</span>", end=" ")
+
+    print("&emsp;<span style='color:black; font-weight:bold;'>----></span>&emsp;", end=" ")
+
+    for i in range(len(RHS)):
+        if str(type(RHS[i])) == "<class 'ply.yacc.YaccSymbol'>":
+            print(str(RHS[i]), end=" ")
+        else:
+            print("<span style='color:blue'>" + str(RHS[i].value) + "</span>", end=" ")
+
+    print("</p>")
+
+
+def html_output(rules_store):
     print("<head><title> Parser for JAVA </title></head>")
     print("<body style='padding: 20px'> <h1> Rightmost Derrivation </h1> <hr>")
+    LHS = [rules_store[-1][0]]
+    RHS = []
+    # print the derivation
     for rule in rules_store[::-1]:
-        print("<p>")
-        print(str(rule[0]) + "&emsp;-->&emsp;", end="")
-        flag = False
-        print_list = []
-        for symbol in rule[:0:-1]:
-            if str(type(symbol)) == "<class 'ply.yacc.YaccSymbol'>":
-                if not flag:
-                    print_list.append("<span style='color: red; font-weight: bold'>" + str(symbol) + "</span>")
-                    flag = True
-                else:
-                    print_list.append(str(symbol))
-            else:
-                print_list.append("<span style='color: blue'>" + str(symbol.value) + "</span>")
-        # print it in reverse now
-        for t in print_list[::-1]:
-            print(t, end="&emsp;")
-        print("</p>")
+        try:
+            index = LHS.index(rule[0])
+        except ValueError:
+            print("Some Error occured")
+            return
+
+        # store the derrivation of the current rule
+        part_RHS = [symbol for symbol in rule[1:]]
+        RHS = RHS[:index] + part_RHS + RHS[index + 1:]
+        format_print(LHS, RHS, index)
+        LHS = RHS
+
     print("</body>")
+
 
 def main():
     tokens = lexer.tokens
@@ -975,8 +998,9 @@ def main():
     inputfile = open(sys.argv[1],'r').read()
     inputfile += "\n"
     parser.parse(inputfile, debug=0)
-    # print(rules_store)
-    right_derrivative(rules_store)
+    # html_output(rules_store)
+    # for i in rules_store:
+        # print(i)
 
 
 if __name__ == "__main__":
