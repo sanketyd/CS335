@@ -901,6 +901,7 @@ def p_AssignmentExpression(p):
     '''
     AssignmentExpression : ConditionalExpression
     | Assignment
+    | LambdaExpression
     '''
     rules_store.append(p.slice)
 
@@ -935,6 +936,13 @@ def p_AssignmentOperator(p):
 def p_Expression(p):
     '''
     Expression : AssignmentExpression
+    '''
+    rules_store.append(p.slice)
+
+def p_LambdaExpression(p):
+    '''
+    LambdaExpression : LAMBDA L_PAREN FormalParameterList R_PAREN LAMBDA_TOKEN Block
+    | LAMBDA L_PAREN R_PAREN LAMBDA_TOKEN Block
     '''
     rules_store.append(p.slice)
 
@@ -998,7 +1006,7 @@ def main():
     inputfile = open(sys.argv[1],'r').read()
     inputfile += "\n"
     parser.parse(inputfile, debug=0)
-    # html_output(rules_store)
+    html_output(rules_store)
     # for i in rules_store:
         # print(i)
 
