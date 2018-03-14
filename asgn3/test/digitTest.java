@@ -1,5 +1,7 @@
-public class digitTest{
-    public static void main(String[] args){
+package in.ac.iitk.cs335;
+import java.util.*;
+class digitTest{
+    static void main() {
         int octal = 017;
         int hexa = 0xe;
         int binary = 0b10;
