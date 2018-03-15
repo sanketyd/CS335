@@ -112,8 +112,6 @@ class Tokens(object):
                 'BLOCK_CLOSER',
                 'L_SQBR',
                 'R_SQBR',
-                'GENERIC_START',
-                'GENERIC_END'
                 ]
         return separators
 
@@ -176,8 +174,6 @@ t_BLOCK_OPENER    = r'\{'
 t_BLOCK_CLOSER    = r'\}'
 t_L_SQBR          = r'\['
 t_R_SQBR          = r'\]'
-t_GENERIC_START     = r'<\?'
-t_GENERIC_END       = r'\?>'
 
 # Operators
 t_EQUALS          = r'=='

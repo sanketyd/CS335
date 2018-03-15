@@ -62,7 +62,6 @@ def p_FloatingPointType(p):
 
 def p_ReferenceType(p):
     ''' ReferenceType : ArrayType
-    | GenericType
     | ClassType
     '''
     rules_store.append(p.slice)
@@ -77,12 +76,6 @@ def p_ArrayType(p):
     ''' ArrayType : PrimitiveType L_SQBR R_SQBR
     | Name L_SQBR R_SQBR
     | ArrayType L_SQBR R_SQBR
-    '''
-    rules_store.append(p.slice)
-
-def p_GenericType(p):
-    '''
-    GenericType : Name GENERIC_START Name GENERIC_END
     '''
     rules_store.append(p.slice)
 
@@ -700,8 +693,6 @@ def p_ArrayCreationExpression(p):
     | NEW PrimitiveType DimExprs
     | NEW ClassType DimExprs Dims
     | NEW ClassType DimExprs
-    | NEW GenericType DimExprs Dims
-    | NEW GenericType DimExprs
     '''
     rules_store.append(p.slice)
 
@@ -1005,8 +996,8 @@ def main():
     parser = yacc.yacc()
     inputfile = open(sys.argv[1],'r').read()
     inputfile += "\n"
-    parser.parse(inputfile, debug=0)
-    html_output(rules_store)
+    parser.parse(inputfile, debug=1)
+    # html_output(rules_store)
     # for i in rules_store:
         # print(i)
 
