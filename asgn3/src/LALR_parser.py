@@ -994,10 +994,13 @@ def html_output(rules_store):
 def main():
     tokens = lexer.tokens
     parser = yacc.yacc()
-    inputfile = open(sys.argv[1],'r').read()
-    inputfile += "\n"
-    parser.parse(inputfile, debug=1)
-    # html_output(rules_store)
+    inputfile = sys.argv[1]
+    file_out = inputfile.split('/')[-1].split('.')[0]
+    code = open(inputfile, 'r').read()
+    code += "\n"
+    parser.parse(code, debug=0)
+    sys.stdout = open(file_out + ".html", 'w')
+    html_output(rules_store)
     # for i in rules_store:
         # print(i)
 

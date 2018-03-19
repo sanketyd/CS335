@@ -1,3 +1,0 @@
-rm parser.out
-rm parsetab.*
-python LALR_parser.py $1
