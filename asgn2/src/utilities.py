@@ -140,8 +140,8 @@ class Instruction:
         elif instr_type == "input":
             # 10, input, variable
             self.instr_type = "scan_int"
-            self.inp1, self.array_index_i1 = self.handle_array_notation(statement[-1].strip())
-            self.add_to_symbol_table([self.inp1, self.array_index_i1])
+            self.out, self.array_index_o = self.handle_array_notation(statement[-1].strip())
+            self.add_to_symbol_table([self.out, self.array_index_o])
 
         elif instr_type in ["~","!","++","--"]:
             #10, ++, out, variable
@@ -173,7 +173,7 @@ class Instruction:
         elif instr_type == "ret":
             self.instr_type = "return"
             if len(statement) == 3:
-                self.out = statement[-1].strip()
+                self.inp1 = statement[-1].strip()
 
         elif instr_type == "=":
             # 10, =, a, 2
@@ -219,6 +219,7 @@ class Instruction:
 
 
     def populate_per_inst_next_use(self):
+        return
         '''
         for each symbol in instruction, initialize the next use
         and liveness parameters
@@ -253,7 +254,7 @@ def read_three_address_code(filename):
             line_no = IR.line_no
             instr_type = IR.instr_type
             if instr_type in leader_instructions:
-                if instr_type != "label" and instr_type != "print_int":
+                if instr_type != "label" and instr_type != "print_int" and instr_type != "scan_int":
                     line_no += 1
                 leader.add(line_no)
             if instr_type == "ifgoto" or instr_type == "goto":

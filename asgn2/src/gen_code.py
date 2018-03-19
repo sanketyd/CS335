@@ -1,6 +1,7 @@
 #!/usr/bin/env python
-import copy
 import sys
+import copy
+from math import log
 from get_reg import *
 from utilities import *
 
@@ -27,6 +28,7 @@ class CodeGenerator:
         print("\tpush ebp")
         print("\tmov ebp,esp")
         loc = get_best_location(instr.inp1)
+        save_context()
         print("\tpush dword " + str(loc))
         print("\tpush dword print_int")
         print("\tcall printf")
@@ -35,17 +37,46 @@ class CodeGenerator:
         print("\tpop ebp")
 
     def op_scan_int(self, instr):
+        save_context()
         print("\tpush ebp")
         print("\tmov ebp,esp")
-        loc = get_best_location(instr.inp1)
-        print("\tpush " + instr.inp1)
+        print("\tpush " + instr.out)
         print("\tpush scan_int")
         print("\tcall scanf")
         print("\tadd esp, 8")
         print("\tmov esp, ebp")
         print("\tpop ebp")
 
+    def optimize_if_possible(self, out, inp1, inp2, op):
+        '''
+        If both inputs are integers; compute them beforehand
+        '''
+        if is_valid_number(inp1) and is_valid_number(inp2):
+            inp1 = int(inp1)
+            inp2 = int(inp2)
+            if op == "+":
+                res = inp1 + inp2
+            elif op == "-":
+                res = inp1 - inp2
+            elif op == "*":
+                res = inp1 * inp2
+            elif op == "/":
+                res = inp1 / inp2
+            elif op == "%":
+                res = inp1 % inp2
+            elif op == "<<":
+                res = inp1 << inp2
+            elif op == ">>":
+                res = inp1 >> inp2
+            res = int(res)
+            print("\tmov " + get_best_location(out) + ", " + get_best_location(str(res)))
+            return True
+        return False
+
     def op_add(self, instr):
+        optimized = self.optimize_if_possible(instr.out, instr.inp1, instr.inp2, instr.operation)
+        if optimized:
+            return
         R1, flag = get_reg(instr)
         if flag:
             print("\tmov "+ R1 + ", " + get_best_location(instr.inp1))
@@ -56,6 +87,9 @@ class CodeGenerator:
 
 
     def op_sub(self, instr):
+        optimized = self.optimize_if_possible(instr.out, instr.inp1, instr.inp2, instr.operation)
+        if optimized:
+            return
         R1, flag = get_reg(instr)
         if flag:
             print("\tmov "+ R1 + ", " + get_best_location(instr.inp1))
@@ -66,18 +100,22 @@ class CodeGenerator:
 
 
     def op_mult(self, instr):
+        optimized = self.optimize_if_possible(instr.out, instr.inp1, instr.inp2, instr.operation)
+        if optimized:
+            return
         R1, flag = get_reg(instr)
         if flag:
             print("\tmov "+ R1 + ", " + get_best_location(instr.inp1))
-        flag = False        # to avoid multiple operations
+        # handle cases when inp2 is a power of 2
+        bitshift = False        # to avoid multiple operations
         if is_valid_number(instr.inp2):
-            if instr.inp2 == "2":
-                print("\tshl " + R1 + ", 1")
-                flag = True
-            elif instr.inp2 == "4":
-                print("\tshl " + R1 + ", 2")
-                flag = True
-        if not flag:
+            num = int(instr.inp2)
+            if num & (num - 1) == 0 and num != 0:
+                # use bitshift
+                power = int(log(int(instr.inp2)))
+                print("\tshl " + R1 + ", " + str(power))
+                bitshift = False
+        if not bitshift:
             R2 = get_best_location(instr.inp2)
             print("\timul " + R1 + ", " + R2)
         update_reg_descriptors(R1, instr.out)
@@ -85,10 +123,12 @@ class CodeGenerator:
 
 
     def op_div(self, instr):
-        #1 thing that can be done is if inp1 is in eax then move it from reg so mov this after mov R1, eax
-        save_reg_contents("edx")
+        optimized = self.optimize_if_possible(instr.out, instr.inp1, instr.inp2, instr.operation)
+        if optimized:
+            return
         save_reg_contents("eax")
         print("\tmov eax, " + get_best_location(instr.inp1))
+        save_reg_contents("edx")
         if is_valid_number(instr.inp2):
             R1, flag = get_reg(instr,exclude=["eax","edx"])
             print("\tmov " + R1 + ", " + get_best_location(instr.inp2))
@@ -102,9 +142,12 @@ class CodeGenerator:
 
 
     def op_modulo(self, instr):
-        save_reg_contents("edx")
+        optimized = self.optimize_if_possible(instr.out, instr.inp1, instr.inp2, instr.operation)
+        if optimized:
+            return
         save_reg_contents("eax")
         print("\tmov eax, " + get_best_location(instr.inp1))
+        save_reg_contents("edx")
         if is_valid_number(instr.inp2):
             R1, flag = get_reg(instr,exclude=["eax","edx"])
             print("\tmov " + R1 + ", " + get_best_location(instr.inp2))
@@ -119,20 +162,34 @@ class CodeGenerator:
 
 
     def op_lshift(self, instr):
+        optimized = self.optimize_if_possible(instr.out, instr.inp1, instr.inp2, instr.operation)
+        if optimized:
+            return
         R1, flag = get_reg(instr)
         if flag:
             print("\tmov "+ R1 + ", " + get_best_location(instr.inp1))
-        R2 = get_best_location(instr.inp2)
+        R2 = None
+        if is_valid_number(instr.inp2):
+            R2 = instr.inp2
+        else:
+            R2 = get_best_location(instr.inp2)
         print("\tshl " + R1 + ", " + R2)
         update_reg_descriptors(R1, instr.out)
         free_regs(instr)
 
 
     def op_rshift(self, instr):
+        optimized = self.optimize_if_possible(instr.out, instr.inp1, instr.inp2, instr.operation)
+        if optimized:
+            return
         R1, flag = get_reg(instr)
         if flag:
             print("\tmov "+ R1 + ", " + get_best_location(instr.inp1))
-        R2 = get_best_location(instr.inp2)
+        R2 = None
+        if is_valid_number(instr.inp2):
+            R2 = instr.inp2
+        else:
+            R2 = get_best_location(instr.inp2)
         print("\tshr " + R1 + ", " + R2)
         update_reg_descriptors(R1, instr.out)
         free_regs(instr)
@@ -309,6 +366,7 @@ class CodeGenerator:
         print("\tjmp " + jmp_label)
 
     def op_label(self, instr):
+        save_context()
         print("func_" + instr.label_name + ":")
 
     def op_call_function(self, instr):
@@ -318,10 +376,14 @@ class CodeGenerator:
             update_reg_descriptors("eax",instr.out)
 
     def op_return(self, instr):
-        if instr.out != None:
+        if instr.inp1 != None:
+            loc = get_best_location(instr.inp1)
+            save_reg_contents("eax")
+            if loc != "eax":
+                print("\tmov eax, " + loc)
+            save_context(exclude=["eax"])
+        else:
             save_context()
-            # save_reg_contents("eax")
-            print("\tmov eax, " + get_best_location(instr.out))
         print("\tret")
 
     def gen_code(self, instr):
@@ -331,6 +393,7 @@ class CodeGenerator:
         '''
         instr_type = instr.instr_type
         if instr.label_to_be_added == True:
+            save_context()
             print("line_no_" + str(instr.line_no) + ":")
 
         if instr_type == "arithmetic":
@@ -404,17 +467,7 @@ def next_use(leader, IR_code):
             # print(x.line_no)
         # print()
         for instr in reversed(basic_block):
-            if is_valid_sym(instr.out):
-                instr.per_inst_next_use[instr.out].live = symbol_table[instr.out].live
-                instr.per_inst_next_use[instr.out].next_use = symbol_table[instr.out].next_use
-
-            if is_valid_sym(instr.inp1):
-                instr.per_inst_next_use[instr.inp1].live = symbol_table[instr.inp1].live
-                instr.per_inst_next_use[instr.inp1].next_use = symbol_table[instr.inp1].next_use
-
-            if is_valid_sym(instr.inp2):
-                instr.per_inst_next_use[instr.inp2].live = symbol_table[instr.inp2].live
-                instr.per_inst_next_use[instr.inp2].next_use = symbol_table[instr.inp2].next_use
+            instr.per_inst_next_use = copy.deepcopy(symbol_table)
 
             if is_valid_sym(instr.out):
                 symbol_table[instr.out].live = False
@@ -428,9 +481,17 @@ def next_use(leader, IR_code):
                 symbol_table[instr.inp2].live = True
                 symbol_table[instr.inp2].next_use = instr.line_no
 
+            if instr.array_index_o and is_valid_sym(instr.array_index_o):
+                symbol_table[instr.array_index_o].live = True
+                symbol_table[instr.array_index_o].next_use = instr.line_no
+
+            if instr.array_index_i1 and is_valid_sym(instr.array_index_i1):
+                symbol_table[instr.array_index_i1].live = True
+                symbol_table[instr.array_index_i1].next_use = instr.line_no
+
         for instr in basic_block:
             generator.gen_code(instr)
-        save_context()
+        # save_context()
         reset_live_and_next_use()
 
 if __name__ == "__main__":
@@ -439,6 +500,3 @@ if __name__ == "__main__":
     generator.gen_start_template()
     next_use(leader, IR_code)
 
-    # DEBUGGING
-    # for symbol in symbol_table:
-        # print(symbol)

@@ -26,4 +26,4 @@
 24,print,t
 25,++,i,i
 26,ifgoto,leq,i,n,23
-27, ret
+27, ret,0

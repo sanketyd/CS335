@@ -42,15 +42,16 @@ def get_best_location(symbol,exclude_reg=[]):
     elif symbol:
         return "dword " + symbol
 
-def save_context():
+def save_context(exclude=[]):
     saved_symbols = set()
     for reg, symbols in reg_descriptor.items():
-        for symbol in symbols:
-            if symbol not in saved_symbols:
-                print("\tmov [" + str(symbol) + "], " + str(reg))
-                symbol_table[symbol].address_descriptor_reg.clear()
-                saved_symbols.add(symbol)
-        reg_descriptor[reg].clear()
+        if reg not in exclude:
+            for symbol in symbols:
+                if symbol not in saved_symbols:
+                    print("\tmov [" + str(symbol) + "], " + str(reg))
+                    symbol_table[symbol].address_descriptor_reg.clear()
+                    saved_symbols.add(symbol)
+            reg_descriptor[reg].clear()
 
 
 def save_reg_contents(reg):
@@ -94,13 +95,16 @@ def get_reg(instr, compulsory=True, exclude=[]):
             for reg, content in reg_descriptor.items():
                 if reg not in exclude:
                     for var in content:
-                        n_use = symbol_table[var].next_use
-                        if not n_use or n_use > next_use:
+                        n_use = instr.per_inst_next_use[var].next_use
+                        if n_use and n_use > next_use:
                             if n_use:
                                 next_use = n_use
                             R1 = reg
+                        if not n_use:
+                            R1 = reg
+                            break
             save_reg_contents(R1)
             return R1, True
 
         else:
-            return "[" + out +"]", False
+            return "[" + out + "]", False

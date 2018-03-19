@@ -4,7 +4,6 @@ all:
 		cp src/gen_code.py bin/codegen
 		cp src/utilities.py bin/utilities.py
 		cp src/get_reg.py bin/get_reg.py
-		cp src/optimize.py bin/optimize.py
 		chmod +x bin/codegen
 
 clean:
