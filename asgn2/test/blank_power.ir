@@ -1,0 +1,26 @@
+1, =, n, 5
+2, =, b, 4
+3, =, a, 1
+
+
+
+
+
+
+
+
+
+
+
+4, call, power
+5, print, a
+6, ret, 0
+7, label, power
+
+8, ifgoto, eq, b, 0, 12
+9, *, a, n, a
+10, -, b, b, 1
+11, call, power
+
+12, ret
+

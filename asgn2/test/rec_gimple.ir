@@ -1,0 +1,16 @@
+1,call,myfunc
+2,ret,0
+
+3,label,myfunc
+4,=,g0,g
+5,ifgoto,eq,g0,0,D_2046
+6,goto,D_2047
+7,label,D_2046
+8,ret
+9,label,D_2047
+10,=,g1,g
+11,print,g1
+12,=,g2,g
+13,-,g3,g2,1
+14,=,g,g3
+15,call,myfunc

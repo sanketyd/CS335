@@ -1,0 +1,17 @@
+1, input, n 
+2, =, b, 2
+3, =, a, 1
+4, call, prime
+5, print, n
+6, print, b
+7, print, a
+
+8, ret, 0
+
+9, label, prime
+10, ifgoto, eq, b, n, 15
+11, %, a, n, b
+12, ifgoto, eq, a, 0, 15
+13, +, b, b, 1
+14, call, prime
+15, ret
