@@ -57,6 +57,7 @@ class Tokens(object):
                 'throws'          : 'THROWS',
                 'try'             : 'TRY',
                 'while'           : 'WHILE',
+                'null'            : 'NULL',
                 'lambda'          : 'LAMBDA'    #New lambda feature in java
                 }
         return keywords
@@ -125,7 +126,6 @@ class Tokens(object):
                 'STR_CONSTANT',
                 'INLINE_COMMENT',
                 'BLOCK_COMMENT',
-                'NULL',
                 'LAMBDA_TOKEN',
                ]
         return misc
