@@ -1206,6 +1206,23 @@ def p_ConditionalOrExpression(p):
     ConditionalOrExpression : ConditionalAndExpression
     | ConditionalOrExpression LOGICAL_OR ConditionalAndExpression
     '''
+    if(len(p)==2):
+        p[0] = p[1]
+        return
+    newPlace = ST.getTemp()
+    p[0] = {
+        'place' : newPlace,
+        'type' : 'TYPE_ERROR'
+    }
+    if p[1]['type']=='TYPE_ERROR' or p[3]['type']=='TYPE_ERROR':
+        return
+    if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
+        p[3] =ResolveRHSArray(p[3])
+        p[1] =ResolveRHSArray(p[1])
+        TAC.emit(newPlace,p[1]['place'],p[3]['place'],'or')
+        p[0]['type'] = 'INT'
+    else:
+        TAC.error('Error: Type is not compatible'+p[1]['place']+','+p[3]['place']+'.')
     rules_store.append(p.slice)
 
 def p_ConditionalExpression(p):
@@ -1213,14 +1230,86 @@ def p_ConditionalExpression(p):
     ConditionalExpression : ConditionalOrExpression
     | ConditionalOrExpression QUESTION Expression COLON ConditionalExpression
     '''
+    if(len(p)==2):
+        p[0] = p[1]
+        return
     rules_store.append(p.slice)
 
-def p_AssignmentExpression(p):
+def p_AssignmentExpression(p):  #TODO: Lambda Expression
     '''
     AssignmentExpression : ConditionalExpression
     | Assignment
     | LAMBDA LambdaExpression
     '''
+    if(len(p)==2):
+        p[0] = p[1]
+        return
+
+    if(p[3]=='Scanner'):
+        p[0]=p[3]
+        return
+
+    if('input' in p[3].keys() and p[3]['input']):
+        dst=p[1]['place']
+        if( 'isArrayAccess' in p[1].keys() and p[1]['isArrayAccess']):
+            dst=p[1]['place'] + "["+p[1]['index_place'] + "]"
+        TAC.emit('input',dst,'','')
+        p[0] = {}
+        return
+
+    if(type(p[3])!=type({})):
+        p[0]=p[3]
+        return
+#    print(p[3])
+    if('isarray' in p[3].keys() and p[3]['isarray'] and p[2]=='='):
+        TAC.emit('declare',p[1]['place'],p[3]['place'],p[3]['type'])
+        return
+
+    newPlace = ST.getTemp()
+    p[0] = {
+        'place' : newPlace,
+        'type' : 'TYPE_ERROR',
+        'isarray': False
+    }
+    # print(p[3])
+    if('input' in p[3].keys() and p[3]['input']):
+        p[0] = p[3]
+        return
+    if p[1]['type']=='TYPE_ERROR' or p[3]['type']=='TYPE_ERROR':
+        return
+    if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
+        if(p[2][0]=='='):
+            # if( 'isArrayAccess' in p[1].keys() and p[1]['isArrayAccess']):
+            #     dst1 = ST.getTemp()
+            #     TAC.emit(dst1,p[1]['place']+"["+p[1]['index_place']+"]", '','=')
+            #     p[1]['place'] =dst1
+            #     p[1]['isArrayAccess'] =False
+            #     del p[1]['index_place']
+
+            p[3] = ResolveRHSArray(p[3])
+
+            dst = p[1]['place']
+            if( 'isArrayAccess' in p[1].keys() and p[1]['isArrayAccess']):
+                dst=p[1]['place'] + "["+p[1]['index_place'] + "]"
+            TAC.emit(dst,p[3]['place'],'',p[2])
+            p[0] = p[1]
+            # print(p[0])
+        else:
+            p[3]=ResolveRHSArray(p[3])
+            # print(p[1])
+            new1=p[1].copy()
+            new = ResolveRHSArray(p[1])
+            p[1]=new1.copy()
+            # print(p[1])
+            dst = p[1]['place']
+            if( 'isArrayAccess' in p[1].keys() and p[1]['isArrayAccess']):
+                dst=p[1]['place'] + "["+p[1]['index_place'] + "]"
+            TAC.emit(newPlace,new['place'],p[3]['place'],p[2][0])
+            # print("lok here=====> " +dst)
+            TAC.emit(dst,newPlace,'',p[2][1])
+        p[0]['type'] = 'INT'
+    else:
+        TAC.error('Error: Type is not compatible'+p[1]['place']+','+p[3]['place']+'.')
     rules_store.append(p.slice)
 
 def p_Assignment(p):
@@ -1248,6 +1337,8 @@ def p_AssignmentOperator(p):
     | LSHIFTEQ
     | RSHIFTEQ
     '''
+    p[0] = p[1]
+
     rules_store.append(p.slice)
     #To check if I missed something
 
@@ -1255,6 +1346,7 @@ def p_Expression(p):
     '''
     Expression : AssignmentExpression
     '''
+    p[0] = p[1]    
     rules_store.append(p.slice)
 
 def p_LambdaExpression(p):
@@ -1268,10 +1360,15 @@ def p_ConstantExpression(p):
     '''
     ConstantExpression : Expression
     '''
+    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_error(p):
-    print("Syntax Error in line %d" %(p.lineno))
+    if p == None:
+        print str(sys.argv[1])+" ::Something is not right at the end"
+    else:
+        print str(sys.argv[1])+" :: Syntax error in line no " +  str(p.lineno)
+    #print("Syntax Error in line %d" %(p.lineno))
 
 
 def format_print(LHS, RHS, index):
@@ -1334,3 +1431,16 @@ def main():
 
 if __name__ == "__main__":
     main()
+    ST = SymbolTable.SymbolTable()
+    TAC = ThreeAddressCode.ThreeAddressCode()
+
+    s = open(sys.argv[1],'r')
+    data = s.read()
+    data+= "\n"
+    s.close()
+
+    #Parse it!
+    yacc.parse(data)
+    # TAC.output()
+    TAC.output3AC()
+
