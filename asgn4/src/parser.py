@@ -16,8 +16,8 @@ def p_Goal(p):
 def p_Identfier(p):
     '''Identifier : IDENTIFIER'''
     p[0] = {
-        'type' : 'Identifier',
-        'value' : p[1]
+        'place' : p[1],
+        'type' : 'Identifier'
     }
 
 def p_Literal(p):
@@ -36,7 +36,7 @@ def p_IntegerConst(p):
     IntegerConst : INT_CONSTANT
     '''
     p[0] = {
-        'value' : p[1],
+        'place' : p[1],
         'type' : 'INT'
     }
 
@@ -46,7 +46,7 @@ def p_FloatConst(p):
     FloatConst : FLOAT_CONSTANT
     '''
     p[0] = {
-        'value' : p[1],
+        'place' : p[1],
         'type' : 'FLOAT'
     }
 
@@ -56,7 +56,7 @@ def p_CharConst(p):
     CharConst : CHAR_CONSTANT
     '''
     p[0] = {
-        'value' : p[1],
+        'place' : p[1],
         'type' : 'CHAR'
     }
 
@@ -66,7 +66,7 @@ def p_StringConst(p):
     StringConst : STR_CONSTANT
     '''
     p[0] = {
-        'value' : p[1],
+        'place' : p[1],
         'type' : 'STR'
     }
 
@@ -76,7 +76,7 @@ def p_NullConst(p):
     NullConst : NULL
     '''
     p[0] = {
-        'value' : p[1],
+        'place' : p[1],
         'type' : 'NULL'
     }
 
@@ -87,7 +87,6 @@ def p_Type(p):
     | ReferenceType
     '''
     p[0] = p[1]
-    print(p[0])
     rules_store.append(p.slice)
 
 def p_PrimitiveType(p):
@@ -96,12 +95,12 @@ def p_PrimitiveType(p):
     '''
     if type(p[1]) == type(""):
         p[0] = {
-            'value' : p[1],
-            'type' : 'PrimVarType'
+            'place' : p[1],
         }
     else:
         p[0] = p[1]
-        p[0]['type'] = 'PrimVarType'
+
+    p[0]["type"] = "prim_type"
     rules_store.append(p.slice)
 
 def p_NumericType(p):
@@ -119,8 +118,7 @@ def p_IntegralType(p):
     | CHAR
     '''
     p[0] = {
-        'value' : p[1],
-        'type' : 'VarType'
+        'place' : p[1],
     }
     rules_store.append(p.slice)
 
@@ -129,8 +127,7 @@ def p_FloatingPointType(p):
     | DOUBLE
     '''
     p[0] = {
-        'value' : p[1],
-        'type' : 'VarType'
+        'place' : p[1],
     }
     rules_store.append(p.slice)
 
@@ -155,8 +152,8 @@ def p_ArrayType(p):
     | ArrayType L_SQBR R_SQBR
     '''
     p[0] = {
-        'value' : p[1]['value'] + p[2] + p[3],
-        'type' : 'ArrVarType'
+        'place' : p[1]['place'] + p[2] + p[3],
+        'type' : "arr_type"
     }
     rules_store.append(p.slice)
 
@@ -177,11 +174,9 @@ def p_QualifiedName(p):
     ''' QualifiedName : Name DOT Identifier'''
     p[0] = {
         'value' : p[1]['value'] + p[2] + p[3]['value'],
-        'type' : 'QualifiedID'
+        'is_name' : True
     }
     rules_store.append(p.slice)
-
-
 
 # Section 19.6
 
@@ -257,6 +252,7 @@ def p_Modifier(p):
     | FINAL
     '''
     rules_store.append(p.slice)
+
 # Section 19.8
 
 def p_ClassDeclaration(p):
@@ -765,6 +761,7 @@ def p_ClassInstanceCreationExpression(p):
     ClassInstanceCreationExpression : NEW ClassType L_PAREN R_PAREN
     | NEW ClassType L_PAREN ArgumentList R_PAREN
     '''
+    p[0] = p[2]
     rules_store.append(p.slice)
 
 def p_ArgumentList(p):
@@ -772,6 +769,8 @@ def p_ArgumentList(p):
     ArgumentList : Expression
     | ArgumentList COMMA Expression
     '''
+    if len(p) == 2:
+        p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_ArrayCreationExpression(p):
@@ -781,6 +780,12 @@ def p_ArrayCreationExpression(p):
     | NEW ClassType DimExprs Dims
     | NEW ClassType DimExprs
     '''
+    if len(p) == 4:
+        p[0] = {
+            "type" : p[2]['place'],
+            'place' : p[3]['place'],
+            "is_array" : True
+        }
     rules_store.append(p.slice)
 
 def p_DimExprs(p):
@@ -788,12 +793,19 @@ def p_DimExprs(p):
     DimExprs : DimExpr
     | DimExprs DimExpr
     '''
+    if len(p) == 2:
+        p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_DimExpr(p):
     '''
     DimExpr : L_SQBR Expression R_SQBR
     '''
+    if p[2]["type"] == "INT":
+        p[0] = p[2]
+    else:
+        # TODO: raise error
+        pass
     rules_store.append(p.slice)
 
 def p_Dims(p):
@@ -801,6 +813,10 @@ def p_Dims(p):
     Dims : L_SQBR R_SQBR
     | Dims L_SQBR R_SQBR
     '''
+    if len(p) == 3:
+        p[0] = 1
+    else:
+        p[0] = 1 + p[1]
     rules_store.append(p.slice)
 
 def p_FieldAccess(p):
@@ -819,6 +835,7 @@ def p_MethodInvocation(p):
     | SUPER DOT Identifier L_PAREN ArgumentList R_PAREN
     | SUPER DOT Identifier L_PAREN R_PAREN
     '''
+    # TODO: emit instr to call the specified function
     rules_store.append(p.slice)
 
 def p_ArrayAccess(p):
@@ -966,6 +983,14 @@ def p_ConditionalOrExpression(p):
     ConditionalOrExpression : ConditionalAndExpression
     | ConditionalOrExpression LOGICAL_OR ConditionalAndExpression
     '''
+    # TODO TODO
+    if len(p) == 2:
+        p[0] = p[1]
+    else:
+        new_temp = sym_table.get_temp()
+        p[0] = {
+            'place' : new_temp,
+        }
     rules_store.append(p.slice)
 
 def p_ConditionalExpression(p):
@@ -973,6 +998,11 @@ def p_ConditionalExpression(p):
     ConditionalExpression : ConditionalOrExpression
     | ConditionalOrExpression QUESTION Expression COLON ConditionalExpression
     '''
+    if len(p) == 2:
+        p[0] = p[1]
+    else:
+        # TODO: handle ternary
+        pass
     rules_store.append(p.slice)
 
 def p_AssignmentExpression(p):
@@ -981,13 +1011,19 @@ def p_AssignmentExpression(p):
     | Assignment
     | LambdaExpression
     '''
+    if len(p) == 2:
+        # conditional expression encountered
+        p[0] = p[1]
+    elif len(p) == 3:
+        pass
+    else:
+        pass
     rules_store.append(p.slice)
 
 def p_Assignment(p):
     '''
     Assignment : LeftHandSide AssignmentOperator AssignmentExpression
     '''
-    rules_store.append(p.slice)
 
 def p_LeftHandSide(p):
     '''
@@ -1008,6 +1044,7 @@ def p_AssignmentOperator(p):
     | LSHIFTEQ
     | RSHIFTEQ
     '''
+    p[0] = p[1]
     rules_store.append(p.slice)
     #To check if I missed something
 
@@ -1015,6 +1052,7 @@ def p_Expression(p):
     '''
     Expression : AssignmentExpression
     '''
+    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_LambdaExpression(p):
@@ -1028,6 +1066,7 @@ def p_ConstantExpression(p):
     '''
     ConstantExpression : Expression
     '''
+    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_error(p):
