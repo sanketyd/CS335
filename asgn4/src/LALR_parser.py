@@ -88,12 +88,16 @@ def p_Name(p):
 def p_SimpleName(p):
     ''' SimpleName : IDENTIFIER'''
     rules_store.append(p.slice)
-
+    p[0] = {
+        'idVal' : p[1],
+        'isnotjustname' : False
+        }
 def p_QualifiedName(p):
     ''' QualifiedName : Name DOT IDENTIFIER'''
     rules_store.append(p.slice)
-
-
+    p[0]= {
+        'idVal' : p[1]['idVal']+"."+p[3]
+        }
 
 # Section 19.6
 
@@ -227,6 +231,11 @@ def p_VariableDeclarators(p):
     VariableDeclarators : VariableDeclarator
     | VariableDeclarators COMMA VariableDeclarator
     '''
+    if(len(p)==2):
+        p[0]=p[1]
+    else:
+        p[0]=p[1]+p[3]
+
     rules_store.append(p.slice)
 
 def p_VariableDeclarator(p):
@@ -234,6 +243,16 @@ def p_VariableDeclarator(p):
     VariableDeclarator : VariableDeclaratorId
     | VariableDeclaratorId ASSIGN VariableInitializer
     '''
+    if(len(p)==2):
+        p[0]=p[1]
+    elif(type(p[3])!=type({})):
+        return
+    if( 'isArray' in p[3].keys() and p[3]['isArray']):
+        TAC.emit('declare',p[1][0],p[3]['place'],p[3]['type'])
+        p[0]=p[1]
+    else:
+        TAC.emit(p[1][0],p[3]['place'],'',p[2])
+        p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_VariableDeclaratorId(p):
@@ -248,6 +267,9 @@ def p_VariableInitializer(p):
     VariableInitializer : Expression
     | ArrayInitializer
     '''
+    if(len(p)==2):
+        p[0]=p[1]
+        return
     rules_store.append(p.slice)
 
 def p_MethodDeclaration(p):
@@ -274,6 +296,13 @@ def p_MethodDeclarator(p):
     MethodDeclarator : IDENTIFIER L_PAREN R_PAREN
     | IDENTIFIER L_PAREN FormalParameterList R_PAREN
     '''
+    if(len(p)>3):
+        label1 = TAC.newLabel()
+        TAC.emit('func','','','')
+        p[0]=[label1]
+        stackbegin.append(p[1])
+        stackend.append(l1)
+        TAC.emit('label',p[1][0],'','')
     rules_store.append(p.slice)
 
 def p_FormalParametersList(p):
@@ -398,6 +427,10 @@ def p_LocalVariableDeclaration(p):
     '''
     LocalVariableDeclaration : Type VariableDeclarators
     '''
+    for i in p[2]:
+        if(p[1]['type']=='SCANNER'):
+            p[1]['type']='INT'
+                ST.variableAdd(i, i, p[1]['type'])
     rules_store.append(p.slice)
 
 def p_Statement(p):
@@ -458,6 +491,7 @@ def p_ExpressionStatement(p):
     '''
     ExpressionStatement : StatementExpression STMT_TERMINATOR
     '''
+    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_StatementExpression(p):
