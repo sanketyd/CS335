@@ -28,6 +28,7 @@ class ScopeTable:
     def lookup(self, symbol, is_func=False):
         scope = self.curr_scope
 
+        # TODO: may need to return dict instead of boolean
         while scope != None:
             if not is_func and symbol in self.symbol_and_table_map[scope].symbols:
                 return True
