@@ -22,7 +22,6 @@ def p_Literal(p):
     | NULL
     '''
     rules_store.append(p.slice)
-    # TODO: bool constant
 
 
 # Section 19.4
@@ -892,7 +891,7 @@ def p_AssignmentExpression(p):
     '''
     AssignmentExpression : ConditionalExpression
     | Assignment
-    | LambdaExpression
+    | LAMBDA LambdaExpression
     '''
     rules_store.append(p.slice)
 
@@ -932,8 +931,8 @@ def p_Expression(p):
 
 def p_LambdaExpression(p):
     '''
-    LambdaExpression : LAMBDA L_PAREN FormalParameterList R_PAREN LAMBDA_TOKEN Block
-    | LAMBDA L_PAREN R_PAREN LAMBDA_TOKEN Block
+    LambdaExpression : L_PAREN FormalParameterList R_PAREN LAMBDA_TOKEN Block
+    | L_PAREN R_PAREN LAMBDA_TOKEN Block
     '''
     rules_store.append(p.slice)
 
