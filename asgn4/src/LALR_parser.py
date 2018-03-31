@@ -3,7 +3,14 @@ import sys
 import ply.lex as lex
 import ply.yacc as yacc
 import lexer
+from three_address_code import TAC
+from new_sym_table import ScopeTable
 
+TAC = TAC()
+ST = ScopeTable()
+
+stackbegin = []
+stackend = []
 
 rules_store = []
 # Section 19.2
@@ -13,15 +20,68 @@ def p_Goal(p):
     rules_store.append(p.slice)
 
 # Section 19.3
+def p_Identfier(p):
+    '''Identifier : IDENTIFIER'''
+    p[0] = p[1]
 
 def p_Literal(p):
-    ''' Literal : INT_CONSTANT
-    | FLOAT_CONSTANT
-    | CHAR_CONSTANT
-    | STR_CONSTANT
-    | NULL
+    ''' Literal : IntegerConst
+    | FloatConst
+    | CharConst
+    | StringConst
+    | NullConst
     '''
+    p[0] = p[1]
     rules_store.append(p.slice)
+
+def p_IntegerConst(p):
+    '''
+    IntegerConst : INT_CONSTANT
+    '''
+    p[0] = {
+        'place' : p[1],
+        'type' : 'INT'
+    }
+
+
+def p_FloatConst(p):
+    '''
+    FloatConst : FLOAT_CONSTANT
+    '''
+    p[0] = {
+        'place' : p[1],
+        'type' : 'FLOAT'
+    }
+
+
+def p_CharConst(p):
+    '''
+    CharConst : CHAR_CONSTANT
+    '''
+    p[0] = {
+        'place' : p[1],
+        'type' : 'CHAR'
+    }
+
+
+def p_StringConst(p):
+    '''
+    StringConst : STR_CONSTANT
+    '''
+    p[0] = {
+        'place' : p[1],
+        'type' : 'STR'
+    }
+
+
+def p_NullConst(p):
+    '''
+    NullConst : NULL
+    '''
+    p[0] = {
+        'place' : p[1],
+        'type' : 'NULL'
+    }
 
 
 # Section 19.4
@@ -30,18 +90,26 @@ def p_Type(p):
     ''' Type : PrimitiveType
     | ReferenceType
     '''
+    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_PrimitiveType(p):
     ''' PrimitiveType : NumericType
     | BOOLEAN
     '''
+    if type(p[1]) != type({}):
+        p[0] = {
+            'idVal' : p[1]
+        }
+    else:
+        p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_NumericType(p):
     ''' NumericType : IntegralType
     | FloatingPointType
     '''
+    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_IntegralType(p):
@@ -51,24 +119,32 @@ def p_IntegralType(p):
     | LONG
     | CHAR
     '''
+    p[0] = {
+        'idVal' : p[1]
+    }
     rules_store.append(p.slice)
 
 def p_FloatingPointType(p):
     ''' FloatingPointType : FLOAT
     | DOUBLE
     '''
+    p[0] = {
+        'idVal' : p[1]
+    }
     rules_store.append(p.slice)
 
 def p_ReferenceType(p):
     ''' ReferenceType : ArrayType
     | ClassType
     '''
+    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_ClassType(p):
     '''
     ClassType : Name
     '''
+    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_ArrayType(p):
@@ -76,31 +152,34 @@ def p_ArrayType(p):
     | Name L_SQBR R_SQBR
     | ArrayType L_SQBR R_SQBR
     '''
+    p[0] = {
+        'idVal' : p[1]['idVal'] + p[2] + p[3]
+    }
     rules_store.append(p.slice)
 
 # Section 19.5
-
 def p_Name(p):
     ''' Name : SimpleName
     | QualifiedName'''
+    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_SimpleName(p):
-    ''' SimpleName : IDENTIFIER'''
-    rules_store.append(p.slice)
+    ''' SimpleName : Identifier'''
     p[0] = {
         'idVal' : p[1],
         'isnotjustname' : False
-        }
-def p_QualifiedName(p):
-    ''' QualifiedName : Name DOT IDENTIFIER'''
+    }
     rules_store.append(p.slice)
+
+def p_QualifiedName(p):
+    ''' QualifiedName : Name DOT Identifier'''
     p[0]= {
-        'idVal' : p[1]['idVal']+"."+p[3]
-        }
+        'idVal' : p[1]['idVal'] + "." + p[3]
+    }
+    rules_store.append(p.slice)
 
 # Section 19.6
-
 def p_CompilationUnit(p):
     '''
     CompilationUnit : PackageDeclaration ImportDeclarations TypeDeclarations
@@ -173,14 +252,15 @@ def p_Modifier(p):
     | FINAL
     '''
     rules_store.append(p.slice)
+
 # Section 19.8
 
 def p_ClassDeclaration(p):
     '''
-    ClassDeclaration : Modifiers CLASS IDENTIFIER Super ClassBody
-    | Modifiers CLASS IDENTIFIER ClassBody
-    | CLASS IDENTIFIER Super ClassBody
-    | CLASS IDENTIFIER ClassBody
+    ClassDeclaration : Modifiers CLASS Identifier Super ClassBody
+    | Modifiers CLASS Identifier ClassBody
+    | CLASS Identifier Super ClassBody
+    | CLASS Identifier ClassBody
     '''
     rules_store.append(p.slice)
 
@@ -231,10 +311,10 @@ def p_VariableDeclarators(p):
     VariableDeclarators : VariableDeclarator
     | VariableDeclarators COMMA VariableDeclarator
     '''
-    if(len(p)==2):
-        p[0]=p[1]
+    if len(p) == 2:
+        p[0] = p[1]
     else:
-        p[0]=p[1]+p[3]
+        p[0] = p[1] + p[3]
 
     rules_store.append(p.slice)
 
@@ -243,13 +323,14 @@ def p_VariableDeclarator(p):
     VariableDeclarator : VariableDeclaratorId
     | VariableDeclaratorId ASSIGN VariableInitializer
     '''
-    if(len(p)==2):
-        p[0]=p[1]
-    elif(type(p[3])!=type({})):
+    if len(p) == 2:
+        p[0] = p[1]
         return
-    if( 'isArray' in p[3].keys() and p[3]['isArray']):
+    elif type(p[3]) != type({}):
+        return
+    if 'is_array' in p[3].keys() and p[3]['is_array']:
         TAC.emit('declare',p[1][0],p[3]['place'],p[3]['type'])
-        p[0]=p[1]
+        p[0] = p[1]
     else:
         TAC.emit(p[1][0],p[3]['place'],'',p[2])
         p[0] = p[1]
@@ -257,9 +338,11 @@ def p_VariableDeclarator(p):
 
 def p_VariableDeclaratorId(p):
     '''
-    VariableDeclaratorId : IDENTIFIER
+    VariableDeclaratorId : Identifier
     | VariableDeclaratorId L_SQBR R_SQBR
     '''
+    if len(p) == 2:
+        p[0] = [p[1]]
     rules_store.append(p.slice)
 
 def p_VariableInitializer(p):
@@ -268,8 +351,7 @@ def p_VariableInitializer(p):
     | ArrayInitializer
     '''
     if(len(p)==2):
-        p[0]=p[1]
-        return
+        p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_MethodDeclaration(p):
@@ -293,16 +375,16 @@ def p_MethodHeader(p):
 
 def p_MethodDeclarator(p):
     '''
-    MethodDeclarator : IDENTIFIER L_PAREN R_PAREN
-    | IDENTIFIER L_PAREN FormalParameterList R_PAREN
+    MethodDeclarator : Identifier L_PAREN R_PAREN
+    | Identifier L_PAREN FormalParameterList R_PAREN
     '''
     if(len(p)>3):
-        label1 = TAC.newLabel()
-        TAC.emit('func','','','')
-        p[0]=[label1]
+        label1 = TAC.new_label()
+        TAC.emit('func', '', '', '')
+        p[0] = [label1]
         stackbegin.append(p[1])
-        stackend.append(l1)
-        TAC.emit('label',p[1][0],'','')
+        stackend.append(label1)
+        TAC.emit('label', p[1][0], '', '')
     rules_store.append(p.slice)
 
 def p_FormalParametersList(p):
@@ -428,9 +510,9 @@ def p_LocalVariableDeclaration(p):
     LocalVariableDeclaration : Type VariableDeclarators
     '''
     for i in p[2]:
-        if(p[1]['type']=='SCANNER'):
-            p[1]['type']='INT'
-                ST.variableAdd(i, i, p[1]['type'])
+        print(p[1])
+        print(p[2])
+        ST.insert_in_sym_table('symbol', idName=i, idType=p[1]['idVal'])
     rules_store.append(p.slice)
 
 def p_Statement(p):
@@ -477,13 +559,13 @@ def p_EmptyStatement(p):
 
 def p_LabeledStatement(p):
     '''
-    LabeledStatement : IDENTIFIER COLON Statement
+    LabeledStatement : Identifier COLON Statement
     '''
     rules_store.append(p.slice)
 
 def p_LabeledStatementNoShortIf(p):
     '''
-    LabeledStatementNoShortIf : IDENTIFIER COLON StatementNoShortIf
+    LabeledStatementNoShortIf : Identifier COLON StatementNoShortIf
     '''
     rules_store.append(p.slice)
 
@@ -632,22 +714,20 @@ def p_StatementExpressionList(p):
 
 def p_BreakStatement(p):
     '''
-    BreakStatement : BREAK IDENTIFIER STMT_TERMINATOR
+    BreakStatement : BREAK Identifier STMT_TERMINATOR
     | BREAK STMT_TERMINATOR
     '''
     if(len(p)==3 and p[1]=='break'):
-        TAC.emit('goto',stackend[-1],'','')
-        return
+        TAC.emit('goto', stackend[-1], '', '')
     rules_store.append(p.slice)
 
 def p_ContinueStatement(p):
     '''
-    ContinueStatement : CONTINUE IDENTIFIER STMT_TERMINATOR
+    ContinueStatement : CONTINUE Identifier STMT_TERMINATOR
     | CONTINUE STMT_TERMINATOR
     '''
     if(len(p)==3 and p[1]=='continue'):
-        TAC.emit('goto',stackbegin[-1],'','')
-        return
+        TAC.emit('goto', stackbegin[-1], '', '')
     rules_store.append(p.slice)
 
 def p_ReturnStatement(p):
@@ -656,8 +736,7 @@ def p_ReturnStatement(p):
     | RETURN STMT_TERMINATOR
     '''
     if(len(p)==3 and p[1]=='return'):
-        TAC.emit('ret','','','')
-        return
+        TAC.emit('ret', '', '', '')
     rules_store.append(p.slice)
 
 def p_ThrowStatement(p):
@@ -695,12 +774,12 @@ def p_Finally(p):
 
 
 # Section 19.12
-
 def p_Primary(p):
     '''
     Primary : PrimaryNoNewArray
     | ArrayCreationExpression
     '''
+    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_PrimaryNoNewArray(p):
@@ -713,6 +792,8 @@ def p_PrimaryNoNewArray(p):
     | MethodInvocation
     | ArrayAccess
     '''
+    if len(p) == 2:
+        p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_ClassInstanceCreationExpression(p):
@@ -727,6 +808,8 @@ def p_ArgumentList(p):
     ArgumentList : Expression
     | ArgumentList COMMA Expression
     '''
+    if len(p) == 2:
+        p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_ArrayCreationExpression(p):
@@ -736,13 +819,11 @@ def p_ArrayCreationExpression(p):
     | NEW ClassType DimExprs Dims
     | NEW ClassType DimExprs
     '''
-     #Doing just 2nd rule i.e 1D array
-    if(len(p)==4):
-        # TAC.emit('declare',p[2],p[3][1:-1])
-        p[0]={
-            'type' : p[2].upper(),
+    if len(p) == 4:
+        p[0] = {
+            'type' : p[2],
             'place'  : p[3]['place'],
-            'isarray' : True
+            'is_array' : True
         }
     rules_store.append(p.slice)
 
@@ -751,19 +832,18 @@ def p_DimExprs(p):
     DimExprs : DimExpr
     | DimExprs DimExpr
     '''
-    if(len(p)==2):
-        p[0]=p[1]
-        return
+    if len(p) == 2:
+        p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_DimExpr(p):
     '''
     DimExpr : L_SQBR Expression R_SQBR
     '''
-    if(p[2]['type']=='INT'):
-        p[0]=p[2]
+    if p[2]['type'] == 'INT':
+        p[0] = p[2]
     else:
-        TAC.error("Error : Array declaration requires a size as integer : "+p[2]['place'])
+        TAC.error("Error : Array declaration requires a size as integer : " + p[2]['place'])
     rules_store.append(p.slice)
 
 def p_Dims(p):
@@ -771,16 +851,16 @@ def p_Dims(p):
     Dims : L_SQBR R_SQBR
     | Dims L_SQBR R_SQBR
     '''
-    if(len(p)==3):
-        p[0]=1
+    if len(p) == 3:
+        p[0] = 1
     else:
-        p[0]=1+p[1]
+        p[0] = 1 + p[1]
     rules_store.append(p.slice)
 
 def p_FieldAccess(p):
     '''
-    FieldAccess : Primary DOT IDENTIFIER
-    | SUPER DOT IDENTIFIER
+    FieldAccess : Primary DOT Identifier
+    | SUPER DOT Identifier
     '''
     rules_store.append(p.slice)
 
@@ -788,10 +868,10 @@ def p_MethodInvocation(p):
     '''
     MethodInvocation : Name L_PAREN ArgumentList R_PAREN
     | Name L_PAREN R_PAREN
-    | Primary DOT IDENTIFIER L_PAREN ArgumentList R_PAREN
-    | Primary DOT IDENTIFIER L_PAREN R_PAREN
-    | SUPER DOT IDENTIFIER L_PAREN ArgumentList R_PAREN
-    | SUPER DOT IDENTIFIER L_PAREN R_PAREN
+    | Primary DOT Identifier L_PAREN ArgumentList R_PAREN
+    | Primary DOT Identifier L_PAREN R_PAREN
+    | SUPER DOT Identifier L_PAREN ArgumentList R_PAREN
+    | SUPER DOT Identifier L_PAREN R_PAREN
     '''
     rules_store.append(p.slice)
 
@@ -800,6 +880,12 @@ def p_ArrayAccess(p):
     ArrayAccess : Name L_SQBR Expression R_SQBR
     | PrimaryNoNewArray L_SQBR Expression R_SQBR
     '''
+    p[0] = p[1]
+    p[0]['access_type'] = 'array_access'
+    p[0]['type'] = ST.get_attribute(p[0]['idVal'], 'type')
+    p[0]['place'] = ST.get_attribute(p[0]['idVal'], 'place')
+    p[0]['index_place'] = p[3]['place']
+    del p[0]['idVal']
     rules_store.append(p.slice)
 
 def p_PostfixExpression(p):
@@ -816,8 +902,8 @@ def p_PostIncrementExpression(p):
     '''
     PostIncrementExpression : PostfixExpression INCREMENT
     '''
-    if(p[1]['type']=='INT'):
-        TAC.emit(p[1]['place'],p[1]['place'],'1','+')
+    if p[1]['type'] == 'INT':
+        TAC.emit(p[1]['place'], p[1]['place'], '1', '+')
         p[0] = {
             'place' : p[1]['place'],
             'type' : 'INT'
@@ -830,8 +916,8 @@ def p_PostDecrementExpression(p):
     '''
     PostDecrementExpression : PostfixExpression DECREMENT
     '''
-    if(p[1]['type']=='INT'):
-        TAC.emit(p[1]['place'],p[1]['place'],'1','-')
+    if p[1]['type'] == 'INT':
+        TAC.emit(p[1]['place'], p[1]['place'], '1', '-')
         p[0] = {
             'place' : p[1]['place'],
             'type' : 'INT'
@@ -879,7 +965,7 @@ def p_PreDecrementExpression(p):
             'type' : 'INT'
         }
     else:
-        TAC.error("Error: decrement operator can be used with integers only"
+        TAC.error("Error: decrement operator can be used with integers only")
     rules_store.append(p.slice)
 
 def p_UnaryExpressionNotPlusMinus(p):
@@ -912,7 +998,7 @@ def p_MultiplicativeExpression(p):
     if(len(p)==2):
         p[0] = p[1]
         return
-    newPlace = ST.getTemp()
+    newPlace = ST.get_temp()
     p[0] = {
         'place' : newPlace,
         'type' : 'TYPE_ERROR'
@@ -921,20 +1007,20 @@ def p_MultiplicativeExpression(p):
         return
     if p[2] == '*':
         if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
-            p[3] =ResolveRHSArray(p[3])
-            p[1] =ResolveRHSArray(p[1])
-            TAC.emit(newPlace,p[1]['place'],p[3]['place'],p[2])
+            p[3] = ResolveRHSArray(p[3])
+            p[1] = ResolveRHSArray(p[1])
+            TAC.emit(newPlace,p[1]['place'], p[3]['place'], p[2])
             p[0]['type'] = 'INT'
         else:
             TAC.error('Error: Type is not compatible'+p[1]['place']+','+p[3]['place']+'.')
     elif p[2] == '/' :
         if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
-            p[3] =ResolveRHSArray(p[3])
-            p[1] =ResolveRHSArray(p[1])
-            TAC.emit(newPlace,p[1]['place'],p[3]['place'],p[2])
+            p[3] = ResolveRHSArray(p[3])
+            p[1] = ResolveRHSArray(p[1])
+            TAC.emit(newPlace, p[1]['place'], p[3]['place'], p[2])
             p[0]['type'] = 'INT'
         else:
-            TAC.error('Error: Type is not compatible'+p[1]['place']+','+p[3]['place']+'.')
+            TAC.error('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
     elif p[2] == '%':
         if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
             p[3] =ResolveRHSArray(p[3])
@@ -942,7 +1028,7 @@ def p_MultiplicativeExpression(p):
             TAC.emit(newPlace,p[1]['place'],p[3]['place'],p[2])
             p[0]['type'] = 'INT'
         else:
-            TAC.error('Error: Type is not compatible'+p[1]['place']+','+p[3]['place']+'.')
+            TAC.error('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
     rules_store.append(p.slice)
 
 def p_AdditiveExpression(p):
@@ -954,7 +1040,7 @@ def p_AdditiveExpression(p):
     if(len(p)==2):
         p[0] = p[1]
         return
-    newPlace = ST.getTemp()
+    newPlace = ST.get_temp()
     p[0] = {
         'place' : newPlace,
         'type' : 'TYPE_ERROR'
@@ -993,10 +1079,10 @@ def p_RelationalExpression(p):
     if(len(p)==2):
         p[0] = p[1]
         return
-    l1 = TAC.newLabel()
-    l2 = TAC.newLabel()
-    l3 = TAC.newLabel()
-    newPlace = ST.getTemp()
+    l1 = TAC.new_label()
+    l2 = TAC.new_label()
+    l3 = TAC.new_label()
+    newPlace = ST.get_temp()
     p[0]={
         'place' : newPlace,
         'type' : 'TYPE_ERROR'
@@ -1065,10 +1151,10 @@ def p_EqualityExpression(p):
     if(len(p)==2):
         p[0] = p[1]
         return
-    l1 = TAC.newLabel()
-    l2 = TAC.newLabel()
-    l3 = TAC.newLabel()
-    newPlace = ST.getTemp()
+    l1 = TAC.new_label()
+    l2 = TAC.new_label()
+    l3 = TAC.new_label()
+    newPlace = ST.get_temp()
     p[0]={
         'place' : newPlace,
         'type' : 'TYPE_ERROR'
@@ -1079,7 +1165,7 @@ def p_EqualityExpression(p):
         if(p[2][0]=='='):
             p[3] =ResolveRHSArray(p[3])
             p[1] =ResolveRHSArray(p[1])
-            TAC.emit('ifgoto',p[1]['place'],'eq '+p[3]['place'],l2)
+            TAC.emit('ifgoto',p[1]['place'],'eq ' + p[3]['place'],l2)
             TAC.emit('goto',l1,'','')
             TAC.emit('label',l1,'','')
             TAC.emit(newPlace,'0','','=')
@@ -1101,7 +1187,7 @@ def p_EqualityExpression(p):
             TAC.emit('label',l3,'','')
             p[0]['type'] = 'INT'
     else:
-        TAC.error('Error: Type is not compatible'+p[1]['place']+','+p[3]['place']+'.')
+        TAC.error('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
     rules_store.append(p.slice)
 
 def p_AndExpression(p):
@@ -1112,7 +1198,7 @@ def p_AndExpression(p):
     if(len(p)==2):
         p[0] = p[1]
         return
-    newPlace = ST.getTemp()
+    newPlace = ST.get_temp()
     p[0] = {
         'place' : newPlace,
         'type' : 'TYPE_ERROR'
@@ -1125,7 +1211,7 @@ def p_AndExpression(p):
         TAC.emit(newPlace,p[1]['place'],p[3]['place'],'and')
         p[0]['type'] = 'INT'
     else:
-        TAC.error('Error: Type is not compatible'+p[1]['place']+','+p[3]['place']+'.')
+        TAC.error('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
     rules_store.append(p.slice)
 
 def p_ExclusiveOrExpression(p):
@@ -1136,7 +1222,7 @@ def p_ExclusiveOrExpression(p):
     if(len(p)==2):
         p[0] = p[1]
         return
-    newPlace = ST.getTemp()
+    newPlace = ST.get_temp()
     p[0] = {
         'place' : newPlace,
         'type' : 'TYPE_ERROR'
@@ -1149,7 +1235,7 @@ def p_ExclusiveOrExpression(p):
         TAC.emit(newPlace,p[1]['place'],p[3]['place'],'xor')
         p[0]['type'] = 'INT'
     else:
-        TAC.error('Error: Type is not compatible'+p[1]['place']+','+p[3]['place']+'.')
+        TAC.error('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
     rules_store.append(p.slice)
 
 def p_InclusiveOrExpression(p):
@@ -1160,7 +1246,7 @@ def p_InclusiveOrExpression(p):
     if(len(p)==2):
         p[0] = p[1]
         return
-    newPlace = ST.getTemp()
+    newPlace = ST.get_temp()
     p[0] = {
         'place' : newPlace,
         'type' : 'TYPE_ERROR'
@@ -1168,12 +1254,12 @@ def p_InclusiveOrExpression(p):
     if p[1]['type']=='TYPE_ERROR' or p[3]['type']=='TYPE_ERROR':
         return
     if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
-        p[3] =ResolveRHSArray(p[3])
-        p[1] =ResolveRHSArray(p[1])
-        TAC.emit(newPlace,p[1]['place'],p[3]['place'],'or')
+        p[3] = ResolveRHSArray(p[3])
+        p[1] = ResolveRHSArray(p[1])
+        TAC.emit(newPlace, p[1]['place'], p[3]['place'], 'or')
         p[0]['type'] = 'INT'
     else:
-        TAC.error('Error: Type is not compatible'+p[1]['place']+','+p[3]['place']+'.')
+        TAC.error('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
     rules_store.append(p.slice)
 
 def p_ConditionalAndExpression(p):
@@ -1184,7 +1270,7 @@ def p_ConditionalAndExpression(p):
     if(len(p)==2):
         p[0] = p[1]
         return
-    newPlace = ST.getTemp()
+    newPlace = ST.get_temp()
     p[0] = {
         'place' : newPlace,
         'type' : 'TYPE_ERROR'
@@ -1195,10 +1281,10 @@ def p_ConditionalAndExpression(p):
     if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
         p[3] =ResolveRHSArray(p[3])
         p[1] =ResolveRHSArray(p[1])
-        TAC.emit(newPlace,p[1]['place'],p[3]['place'],'and')
+        TAC.emit(newPlace, p[1]['place'], p[3]['place'], 'and')
         p[0]['type'] = 'INT'
     else:
-        TAC.error('Error: Type is not compatible'+p[1]['place']+','+p[3]['place']+'.')
+        TAC.error('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
     rules_store.append(p.slice)
 
 def p_ConditionalOrExpression(p):
@@ -1209,7 +1295,7 @@ def p_ConditionalOrExpression(p):
     if(len(p)==2):
         p[0] = p[1]
         return
-    newPlace = ST.getTemp()
+    newPlace = ST.get_temp()
     p[0] = {
         'place' : newPlace,
         'type' : 'TYPE_ERROR'
@@ -1217,12 +1303,12 @@ def p_ConditionalOrExpression(p):
     if p[1]['type']=='TYPE_ERROR' or p[3]['type']=='TYPE_ERROR':
         return
     if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
-        p[3] =ResolveRHSArray(p[3])
-        p[1] =ResolveRHSArray(p[1])
-        TAC.emit(newPlace,p[1]['place'],p[3]['place'],'or')
+        p[3] = ResolveRHSArray(p[3])
+        p[1] = ResolveRHSArray(p[1])
+        TAC.emit(newPlace, p[1]['place'], p[3]['place'], 'or')
         p[0]['type'] = 'INT'
     else:
-        TAC.error('Error: Type is not compatible'+p[1]['place']+','+p[3]['place']+'.')
+        TAC.error('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
     rules_store.append(p.slice)
 
 def p_ConditionalExpression(p):
@@ -1230,92 +1316,30 @@ def p_ConditionalExpression(p):
     ConditionalExpression : ConditionalOrExpression
     | ConditionalOrExpression QUESTION Expression COLON ConditionalExpression
     '''
-    if(len(p)==2):
+    if len(p) == 2:
         p[0] = p[1]
-        return
     rules_store.append(p.slice)
 
-def p_AssignmentExpression(p):  #TODO: Lambda Expression
+def p_AssignmentExpression(p):
     '''
     AssignmentExpression : ConditionalExpression
     | Assignment
     | LAMBDA LambdaExpression
     '''
-    if(len(p)==2):
+    if len(p) == 2:
         p[0] = p[1]
-        return
-
-    if(p[3]=='Scanner'):
-        p[0]=p[3]
-        return
-
-    if('input' in p[3].keys() and p[3]['input']):
-        dst=p[1]['place']
-        if( 'isArrayAccess' in p[1].keys() and p[1]['isArrayAccess']):
-            dst=p[1]['place'] + "["+p[1]['index_place'] + "]"
-        TAC.emit('input',dst,'','')
-        p[0] = {}
-        return
-
-    if(type(p[3])!=type({})):
-        p[0]=p[3]
-        return
-#    print(p[3])
-    if('isarray' in p[3].keys() and p[3]['isarray'] and p[2]=='='):
-        TAC.emit('declare',p[1]['place'],p[3]['place'],p[3]['type'])
-        return
-
-    newPlace = ST.getTemp()
-    p[0] = {
-        'place' : newPlace,
-        'type' : 'TYPE_ERROR',
-        'isarray': False
-    }
-    # print(p[3])
-    if('input' in p[3].keys() and p[3]['input']):
-        p[0] = p[3]
-        return
-    if p[1]['type']=='TYPE_ERROR' or p[3]['type']=='TYPE_ERROR':
-        return
-    if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
-        if(p[2][0]=='='):
-            # if( 'isArrayAccess' in p[1].keys() and p[1]['isArrayAccess']):
-            #     dst1 = ST.getTemp()
-            #     TAC.emit(dst1,p[1]['place']+"["+p[1]['index_place']+"]", '','=')
-            #     p[1]['place'] =dst1
-            #     p[1]['isArrayAccess'] =False
-            #     del p[1]['index_place']
-
-            p[3] = ResolveRHSArray(p[3])
-
-            dst = p[1]['place']
-            if( 'isArrayAccess' in p[1].keys() and p[1]['isArrayAccess']):
-                dst=p[1]['place'] + "["+p[1]['index_place'] + "]"
-            TAC.emit(dst,p[3]['place'],'',p[2])
-            p[0] = p[1]
-            # print(p[0])
-        else:
-            p[3]=ResolveRHSArray(p[3])
-            # print(p[1])
-            new1=p[1].copy()
-            new = ResolveRHSArray(p[1])
-            p[1]=new1.copy()
-            # print(p[1])
-            dst = p[1]['place']
-            if( 'isArrayAccess' in p[1].keys() and p[1]['isArrayAccess']):
-                dst=p[1]['place'] + "["+p[1]['index_place'] + "]"
-            TAC.emit(newPlace,new['place'],p[3]['place'],p[2][0])
-            # print("lok here=====> " +dst)
-            TAC.emit(dst,newPlace,'',p[2][1])
-        p[0]['type'] = 'INT'
-    else:
-        TAC.error('Error: Type is not compatible'+p[1]['place']+','+p[3]['place']+'.')
     rules_store.append(p.slice)
 
 def p_Assignment(p):
     '''
     Assignment : LeftHandSide AssignmentOperator AssignmentExpression
     '''
+    if 'access_type' not in p[1].keys():
+        # name
+        pass
+    elif p[1]['access_type'] == 'array_access':
+        # LHS is array
+        pass
     rules_store.append(p.slice)
 
 def p_LeftHandSide(p):
@@ -1324,6 +1348,7 @@ def p_LeftHandSide(p):
     | FieldAccess
     | ArrayAccess
     '''
+    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_AssignmentOperator(p):
@@ -1346,7 +1371,7 @@ def p_Expression(p):
     '''
     Expression : AssignmentExpression
     '''
-    p[0] = p[1]    
+    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_LambdaExpression(p):
@@ -1364,11 +1389,7 @@ def p_ConstantExpression(p):
     rules_store.append(p.slice)
 
 def p_error(p):
-    if p == None:
-        print str(sys.argv[1])+" ::Something is not right at the end"
-    else:
-        print str(sys.argv[1])+" :: Syntax error in line no " +  str(p.lineno)
-    #print("Syntax Error in line %d" %(p.lineno))
+    print("Syntax Error in line %d" %(p.lineno))
 
 
 def format_print(LHS, RHS, index):
@@ -1423,24 +1444,7 @@ def main():
     code = open(inputfile, 'r').read()
     code += "\n"
     parser.parse(code, debug=0)
-    sys.stdout = open(file_out + ".html", 'w')
-    html_output(rules_store)
-    # for i in rules_store:
-        # print(i)
 
 
 if __name__ == "__main__":
     main()
-    ST = SymbolTable.SymbolTable()
-    TAC = ThreeAddressCode.ThreeAddressCode()
-
-    s = open(sys.argv[1],'r')
-    data = s.read()
-    data+= "\n"
-    s.close()
-
-    #Parse it!
-    yacc.parse(data)
-    # TAC.output()
-    TAC.output3AC()
-
