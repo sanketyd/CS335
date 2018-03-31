@@ -6,10 +6,11 @@ class ScopeTable:
         self.label_counter = 0
         self.curr_scope = 'start'
         self.curr_sym_table = SymbolTable(self.curr_scope, parent=None)
-        self.symbol_and_table_map = dict()
+        self.scope_and_table_map = dict()
+        self.scope_and_table_map[self.curr_scope] = self.curr_sym_table
 
 
-    def create_new_table(self, new_label)
+    def create_new_table(self, new_label):
         '''
         Creates a new symbol table. If func_name is provided,
         that name is used for scope
@@ -30,11 +31,11 @@ class ScopeTable:
 
         # TODO: may need to return dict instead of boolean
         while scope != None:
-            if not is_func and symbol in self.symbol_and_table_map[scope].symbols:
+            if not is_func and symbol in self.scope_and_table_map[scope].symbols:
                 return True
-            elif is_func and symbol in self.symbol_and_table_map[scope].functions:
+            elif is_func and symbol in self.scope_and_table_map[scope].functions:
                 return True
-            scope = self.symbol_and_table_map[scope].parent
+            scope = self.scope_and_table_map[scope].parent
 
         return False
 
@@ -45,33 +46,17 @@ class ScopeTable:
         return prefix + str(self.label_counter)
 
 
-    def insert_in_sym_table(self, category, **kwargs):
+    def insert_in_sym_table(self, category, idName, idType, is_func=False, is_array=False, arr_size=None):
         '''
         Universal function to insert any symbol into current symbol table
         Returns a string representing the new scope name if a new block is
         about to start; otherwise returns None
         '''
-        if category == "symbol":
-            self.symbol_and_table_map[self.curr_scope].add_symbol(
-                    idName=kwargs[idName],
-                    idType=kwargs[idType],
-                    isArray=kwargs[isArray],
-                    arr_size=kwargs[arr_size]
-            )
+        if not is_func:
+            self.scope_and_table_map[self.curr_scope].add_symbol(idName, idType, is_array, arr_size)
             return None
-        elif category == "function":
-            self.symbol_and_table_map[self.curr_scope].add_function(
-                    func_name=kwargs[func_name],
-                    params=kwargs[param],
-                    ret_type=kwargs[ret_type]
-            )
-            return kwargs[func_name]
         else:
-            new_name = self.make_label(kwargs[block_name])
-            self.symbol_and_table_map[self.curr_scope].add_block(
-                    block_name=new_name
-            )
-            return new_name
+            pass
 
 
 
@@ -87,21 +72,21 @@ class SymbolTable:
         self.blocks = set()
 
 
-    def add_symbol(self, idName, idType, isArray=False, arr_size=None):
+    def add_symbol(self, idName, idType, is_array=False, arr_size=None):
         if idName in self.symbols.keys():
-            raise Exception('Variable %s redeclared, check your program', %(idName))
+            raise Exception('Variable %s redeclared, check your program' %(idName))
 
         # add the ID to symbols dict if not present earlier
         self.symbols[idName] = {
             'type' : idType,
-            'isArray' : isArray,
+            'is_array' : is_array,
             'arr_size' : arr_size
         }
 
 
     def add_function(self, func_name, params=None, ret_type=None):
         if func_name in self.functions.keys():
-            raise Exception('Function %s redeclared, check your program', %(func_name))
+            raise Exception('Function %s redeclared, check your program' %(func_name))
 
         self.functions[func_name] = {
             'n_params' : len(params),
