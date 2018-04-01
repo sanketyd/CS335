@@ -606,21 +606,48 @@ def p_StatementExpression(p):
 
 def p_IfThenStatement(p):
     '''
-    IfThenStatement : IF L_PAREN Expression R_PAREN Statement
+    IfThenStatement : IF L_PAREN Expression R_PAREN IfMark1 Statement IfMark2
     '''
     rules_store.append(p.slice)
 
 def p_IfThenElseStatement(p):
     '''
-    IfThenElseStatement : IF L_PAREN Expression R_PAREN StatementNoShortIf ELSE Statement
+    IfThenElseStatement : IF L_PAREN Expression R_PAREN IfMark1 StatementNoShortIf ELSE IfMark3 Statement IfMark4
     '''
     rules_store.append(p.slice)
 
 def p_IfThenElseStatementNoShortIf(p):
     '''
-    IfThenElseStatementNoShortIf : IF L_PAREN Expression R_PAREN StatementNoShortIf ELSE StatementNoShortIf
+    IfThenElseStatementNoShortIf : IF L_PAREN Expression R_PAREN IfMark1 StatementNoShortIf ELSE IfMark3 StatementNoShortIf IfMark4
     '''
     rules_store.append(p.slice)
+
+def p_IfMark1(p):
+    ''' IfMark1 : '''
+    l1 = ST.make_label()
+    l2 = ST.make_label()
+    TAC.emit('ifgoto', p[-2]['place'], 'eq 0', l2)
+    TAC.emit('goto', l1, '', '')
+    TAC.emit('label', l1, '', '')
+    # TODO: Create new scope here
+    p[0] = [l1, l2]
+
+def p_IfMark2(p):
+    ''' IfMark2 : '''
+    ## TODO: End scope here
+    TAC.emit('label', p[-2][1], '', '')
+
+def p_IfMark3(p):
+    ''' IfMark3 : '''
+    l3 = ST.make_label()
+    TAC.emit('goto', l3, '', '')
+    TAC.emit('label', p[-3][1], '', '')
+    p[0] = [l3]
+
+def p_IfMark4(p):
+    ''' IfMark4 : '''
+    ## TODO: end scope here
+    TAC.emit('label', p[-2][0], '', '')
 
 def p_SwitchStatement(p):
     '''
@@ -1033,8 +1060,6 @@ def p_MultiplicativeExpression(p):
     if p[1]['type'] == 'TYPE_ERROR' or p[3]['type'] == 'TYPE_ERROR':
         return
     if p[2] == '*':
-        print(p[1])
-        print(p[3])
         if p[1]['type'].upper() == 'INT' and p[3]['type'].upper() == 'INT' :
             p[3] = ResolveRHSArray(p[3])
             p[1] = ResolveRHSArray(p[1])
@@ -1136,8 +1161,6 @@ def p_RelationalExpression(p):
     }
     if p[1]['type']=='TYPE_ERROR' or p[3]['type']=='TYPE_ERROR':
         return
-    print(p[1])
-    print(p[3])
 
     if p[1]['type'].upper() == 'INT' and p[3]['type'].upper() == 'INT' :
         if p[2]=='>':
@@ -1388,8 +1411,6 @@ def p_Assignment(p):
     '''
     Assignment : LeftHandSide AssignmentOperator AssignmentExpression
     '''
-    print(p[1])
-    print(p[3])
     if 'access_type' not in p[1].keys():
         # LHS is a simple ID
         attributes = ST.lookup(p[1]['place'])
