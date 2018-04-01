@@ -1444,6 +1444,7 @@ def main():
     code = open(inputfile, 'r').read()
     code += "\n"
     parser.parse(code, debug=0)
+    TAC.generate()
 
 
 if __name__ == "__main__":
