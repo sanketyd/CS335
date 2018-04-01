@@ -4,6 +4,7 @@ class ScopeTable:
         Maintains a list of all symbol tables in program
         '''
         self.label_counter = 0
+        self.temp_var_counter = 0
         self.curr_scope = 'start'
         self.curr_sym_table = SymbolTable(self.curr_scope, parent=None)
         self.scope_and_table_map = dict()
@@ -29,22 +30,25 @@ class ScopeTable:
     def lookup(self, symbol, is_func=False):
         scope = self.curr_scope
 
-        # TODO: may need to return dict instead of boolean
         while scope != None:
             if not is_func and symbol in self.scope_and_table_map[scope].symbols:
-                return True
+                return self.scope_and_table_map[scope].symbols[symbol]
             elif is_func and symbol in self.scope_and_table_map[scope].functions:
-                return True
+                return self.scope_and_table_map[scope].functions[symbol]
             scope = self.scope_and_table_map[scope].parent
 
-        return False
+        return None
 
 
-    def make_label(self, func_name):
-        prefix = "CS335_GROUP7_"
+    def make_label(self):
+        prefix = "CS335_GROUP7_label_"
         self.label_counter = self.label_counter + 1
         return prefix + str(self.label_counter)
 
+    def get_temp_var(self):
+        prefix = "CS335_GROUP7_var_"
+        self.temp_var_counter += 1
+        return prefix + str(self.temp_var_counter)
 
     def insert_in_sym_table(self, category, idName, idType, is_func=False, is_array=False, arr_size=None):
         '''
