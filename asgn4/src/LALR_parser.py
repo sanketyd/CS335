@@ -103,7 +103,7 @@ def p_PrimitiveType(p):
     '''
     if type(p[1]) != type({}):
         p[0] = {
-            'type' : p[1]
+            'type' : 'INT'  # treat boolean as integer for now
         }
     else:
         p[0] = p[1]
@@ -1126,9 +1126,9 @@ def p_RelationalExpression(p):
     if len(p) == 2:
         p[0] = p[1]
         return
-    l1 = TAC.new_label()
-    l2 = TAC.new_label()
-    l3 = TAC.new_label()
+    l1 = ST.make_label()
+    l2 = ST.make_label()
+    l3 = ST.make_label()
     newPlace = ST.get_temp_var()
     p[0] = {
         'place' : newPlace,
@@ -1201,9 +1201,9 @@ def p_EqualityExpression(p):
     if(len(p)==2):
         p[0] = p[1]
         return
-    l1 = TAC.new_label()
-    l2 = TAC.new_label()
-    l3 = TAC.new_label()
+    l1 = ST.make_label()
+    l2 = ST.make_label()
+    l3 = ST.make_label()
     newPlace = ST.get_temp_var()
     p[0]={
         'place' : newPlace,
@@ -1213,28 +1213,32 @@ def p_EqualityExpression(p):
         return
     if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
         if(p[2][0]=='='):
-            p[3] =ResolveRHSArray(p[3])
-            p[1] =ResolveRHSArray(p[1])
-            TAC.emit('ifgoto',p[1]['place'],'eq ' + p[3]['place'],l2)
-            TAC.emit('goto',l1,'','')
-            TAC.emit('label',l1,'','')
-            TAC.emit(newPlace,'0','','=')
-            TAC.emit('goto',l3,'','')
-            TAC.emit('label',l2,'','')
-            TAC.emit(newPlace,'1','','=')
-            TAC.emit('label',l3,'','')
+            p[3] = ResolveRHSArray(p[3])
+            p[1] = ResolveRHSArray(p[1])
+            TAC.emit('ifgoto', p[1]['place'], 'eq ' + p[3]['place'], l2)
+            ##### TODO: May delete the line below; I think!!
+            TAC.emit('goto', l1, '', '')
+            #####
+            TAC.emit('label', l1, '', '')
+            TAC.emit(newPlace, '0', '', '=')
+            TAC.emit('goto', l3, '', '')
+            TAC.emit('label', l2, '', '')
+            TAC.emit(newPlace, '1', '', '=')
+            TAC.emit('label', l3, '', '')
             p[0]['type'] = 'INT'
         else:
-            p[3] =ResolveRHSArray(p[3])
-            p[1] =ResolveRHSArray(p[1])
-            TAC.emit('ifgoto',p[1]['place'],'eq '+p[3]['place'],l2)
-            TAC.emit('goto',l1,'','')
-            TAC.emit('label',l1,'','')
-            TAC.emit(newPlace,'1','','=')
-            TAC.emit('goto',l3,'','')
-            TAC.emit('label',l2,'','')
-            TAC.emit(newPlace,'0','','=')
-            TAC.emit('label',l3,'','')
+            p[3] = ResolveRHSArray(p[3])
+            p[1] = ResolveRHSArray(p[1])
+            TAC.emit('ifgoto', p[1]['place'], 'neq '+ p[3]['place'], l2)
+            ###
+            TAC.emit('goto', l1, '', '')
+            ###
+            TAC.emit('label', l1, '', '')
+            TAC.emit(newPlace, '0', '', '=')
+            TAC.emit('goto', l3, '', '')
+            TAC.emit('label', l2, '', '')
+            TAC.emit(newPlace, '1', '', '=')
+            TAC.emit('label', l3, '', '')
             p[0]['type'] = 'INT'
     else:
         TAC.error('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
