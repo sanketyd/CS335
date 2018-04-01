@@ -13,8 +13,11 @@ stackbegin = []
 stackend = []
 
 rules_store = []
-# Section 19.2
 
+def ResolveRHSArray(dictionary):
+    return dictionary
+
+# Section 19.2
 def p_Goal(p):
     '''Goal : CompilationUnit'''
     rules_store.append(p.slice)
@@ -39,7 +42,7 @@ def p_IntegerConst(p):
     IntegerConst : INT_CONSTANT
     '''
     p[0] = {
-        'place' : p[1],
+        'idVal' : p[1],
         'type' : 'INT'
     }
 
@@ -49,7 +52,7 @@ def p_FloatConst(p):
     FloatConst : FLOAT_CONSTANT
     '''
     p[0] = {
-        'place' : p[1],
+        'idVal' : p[1],
         'type' : 'FLOAT'
     }
 
@@ -59,7 +62,7 @@ def p_CharConst(p):
     CharConst : CHAR_CONSTANT
     '''
     p[0] = {
-        'place' : p[1],
+        'idVal' : p[1],
         'type' : 'CHAR'
     }
 
@@ -69,7 +72,7 @@ def p_StringConst(p):
     StringConst : STR_CONSTANT
     '''
     p[0] = {
-        'place' : p[1],
+        'idVal' : p[1],
         'type' : 'STR'
     }
 
@@ -79,7 +82,7 @@ def p_NullConst(p):
     NullConst : NULL
     '''
     p[0] = {
-        'place' : p[1],
+        'idVal' : p[1],
         'type' : 'NULL'
     }
 
@@ -99,7 +102,7 @@ def p_PrimitiveType(p):
     '''
     if type(p[1]) != type({}):
         p[0] = {
-            'idVal' : p[1]
+            'type' : p[1]
         }
     else:
         p[0] = p[1]
@@ -120,7 +123,7 @@ def p_IntegralType(p):
     | CHAR
     '''
     p[0] = {
-        'idVal' : p[1]
+        'type' : p[1]
     }
     rules_store.append(p.slice)
 
@@ -129,7 +132,7 @@ def p_FloatingPointType(p):
     | DOUBLE
     '''
     p[0] = {
-        'idVal' : p[1]
+        'type' : p[1]
     }
     rules_store.append(p.slice)
 
@@ -149,13 +152,22 @@ def p_ClassType(p):
 
 def p_ArrayType(p):
     ''' ArrayType : PrimitiveType L_SQBR R_SQBR
-    | Name L_SQBR R_SQBR
+    | Name L_SQBR R_SQBR Mark2
     | ArrayType L_SQBR R_SQBR
     '''
-    p[0] = {
-        'idVal' : p[1]['idVal'] + p[2] + p[3]
-    }
+    if len(p) == 3:
+        p[0] = {
+            'type' : p[1]['type'] + p[2] + p[3]
+        }
+    else:
+        p[0] = {
+            'type' : p[1]['place'] + p[2] + p[3]
+        }
+
     rules_store.append(p.slice)
+
+def p_Mark2(p):
+    ''' Mark2 : '''
 
 # Section 19.5
 def p_Name(p):
@@ -167,7 +179,7 @@ def p_Name(p):
 def p_SimpleName(p):
     ''' SimpleName : Identifier'''
     p[0] = {
-        'idVal' : p[1],
+        'place' : p[1],
         'isnotjustname' : False
     }
     rules_store.append(p.slice)
@@ -175,7 +187,7 @@ def p_SimpleName(p):
 def p_QualifiedName(p):
     ''' QualifiedName : Name DOT Identifier'''
     p[0]= {
-        'idVal' : p[1]['idVal'] + "." + p[3]
+        'place' : p[1]['place'] + "." + p[3]
     }
     rules_store.append(p.slice)
 
@@ -254,19 +266,18 @@ def p_Modifier(p):
     rules_store.append(p.slice)
 
 # Section 19.8
-
 def p_ClassDeclaration(p):
     '''
-    ClassDeclaration : Modifiers CLASS Identifier Super ClassBody
+    ClassDeclaration : Modifiers CLASS Identifier Inherit ClassBody
     | Modifiers CLASS Identifier ClassBody
-    | CLASS Identifier Super ClassBody
+    | CLASS Identifier Inherit ClassBody
     | CLASS Identifier ClassBody
     '''
     rules_store.append(p.slice)
 
-def p_Super(p):
+def p_Inherit(p):
     '''
-    Super : EXTENDS ClassType
+    Inherit : EXTENDS ClassType
     '''
     rules_store.append(p.slice)
 
@@ -332,7 +343,7 @@ def p_VariableDeclarator(p):
         TAC.emit('declare',p[1][0],p[3]['place'],p[3]['type'])
         p[0] = p[1]
     else:
-        TAC.emit(p[1][0],p[3]['place'],'',p[2])
+        TAC.emit(p[1][0], p[3]['place'], '', p[2])
         p[0] = p[1]
     rules_store.append(p.slice)
 
@@ -350,8 +361,7 @@ def p_VariableInitializer(p):
     VariableInitializer : Expression
     | ArrayInitializer
     '''
-    if(len(p)==2):
-        p[0] = p[1]
+    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_MethodDeclaration(p):
@@ -375,23 +385,26 @@ def p_MethodHeader(p):
 
 def p_MethodDeclarator(p):
     '''
-    MethodDeclarator : Identifier L_PAREN R_PAREN
+    MethodDeclarator : Identifier L_PAREN R_PAREN Mark1
     | Identifier L_PAREN FormalParameterList R_PAREN
     '''
-    if(len(p)>3):
-        label1 = TAC.new_label()
-        TAC.emit('func', '', '', '')
-        p[0] = [label1]
+    if len(p) == 5:
+        p[0] = [p[1]]
         stackbegin.append(p[1])
-        stackend.append(label1)
-        TAC.emit('label', p[1][0], '', '')
+        stackend.append(p[1])
+        TAC.emit('label', p[1], '', '')
     rules_store.append(p.slice)
+
+def p_Mark1(p):
+    '''Mark1 : '''
 
 def p_FormalParametersList(p):
     '''
     FormalParameterList : FormalParameter
     | FormalParameterList COMMA FormalParameter
     '''
+    if len(p) == 2:
+        p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_FormalParameter(p):
@@ -497,12 +510,14 @@ def p_BlockStatement(p):
     BlockStatement : LocalVariableDeclarationStatement
     | Statement
     '''
+    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_LocalVariableDeclarationStatement(p):
     '''
     LocalVariableDeclarationStatement : LocalVariableDeclaration STMT_TERMINATOR
     '''
+    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_LocalVariableDeclaration(p):
@@ -510,9 +525,7 @@ def p_LocalVariableDeclaration(p):
     LocalVariableDeclaration : Type VariableDeclarators
     '''
     for i in p[2]:
-        print(p[1])
-        print(p[2])
-        ST.insert_in_sym_table('symbol', idName=i, idType=p[1]['idVal'])
+        ST.insert_in_sym_table('symbol', idName=i, idType=p[1]['type'])
     rules_store.append(p.slice)
 
 def p_Statement(p):
@@ -524,6 +537,7 @@ def p_Statement(p):
     | WhileStatement
     | ForStatement
     '''
+    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_StatementNoShortIf(p):
@@ -534,6 +548,7 @@ def p_StatementNoShortIf(p):
     | WhileStatementNoShortIf
     | ForStatementNoShortIf
     '''
+    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_StatementWithoutTrailingSubstatement(p):
@@ -895,14 +910,25 @@ def p_PostfixExpression(p):
     | PostIncrementExpression
     | PostDecrementExpression
     '''
-    p[0] = p[1]
+    p[0] = {}
+    if 'idVal' in p[1].keys():
+        p[0]['place'] = p[1]['idVal']
+        p[0]['type'] = p[1]['type']
+    elif 'place' in p[1].keys():
+        if p[1]['isnotjustname'] == False:
+            attributes = ST.lookup(p[1]['place'])
+            if attributes == None:
+                raise Exception("Undeclared Variable Used: %s)" %(p[1]['idVal']))
+            else:
+                p[0]['type'] = attributes['type']
+                p[0]['place'] = p[1]['place']
     rules_store.append(p.slice)
 
 def p_PostIncrementExpression(p):
     '''
     PostIncrementExpression : PostfixExpression INCREMENT
     '''
-    if p[1]['type'] == 'INT':
+    if p[1]['type'].upper() == 'INT':
         TAC.emit(p[1]['place'], p[1]['place'], '1', '+')
         p[0] = {
             'place' : p[1]['place'],
@@ -916,7 +942,7 @@ def p_PostDecrementExpression(p):
     '''
     PostDecrementExpression : PostfixExpression DECREMENT
     '''
-    if p[1]['type'] == 'INT':
+    if p[1]['type'].upper() == 'INT':
         TAC.emit(p[1]['place'], p[1]['place'], '1', '-')
         p[0] = {
             'place' : p[1]['place'],
@@ -934,7 +960,7 @@ def p_UnaryExpression(p):
     | MINUS UnaryExpression
     | UnaryExpressionNotPlusMinus
     '''
-    if(len(p)==2):
+    if len(p) == 2:
         p[0] = p[1]
         return
     rules_store.append(p.slice)
@@ -998,15 +1024,17 @@ def p_MultiplicativeExpression(p):
     if(len(p)==2):
         p[0] = p[1]
         return
-    newPlace = ST.get_temp()
+    newPlace = ST.get_temp_var()
     p[0] = {
         'place' : newPlace,
         'type' : 'TYPE_ERROR'
     }
-    if p[1]['type']=='TYPE_ERROR' or p[3]['type']=='TYPE_ERROR':
+    if p[1]['type'] == 'TYPE_ERROR' or p[3]['type'] == 'TYPE_ERROR':
         return
     if p[2] == '*':
-        if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
+        print(p[1])
+        print(p[3])
+        if p[1]['type'].upper() == 'INT' and p[3]['type'].upper() == 'INT' :
             p[3] = ResolveRHSArray(p[3])
             p[1] = ResolveRHSArray(p[1])
             TAC.emit(newPlace,p[1]['place'], p[3]['place'], p[2])
@@ -1037,20 +1065,21 @@ def p_AdditiveExpression(p):
     | AdditiveExpression PLUS MultiplicativeExpression
     | AdditiveExpression MINUS MultiplicativeExpression
     '''
-    if(len(p)==2):
+    if len(p) == 2:
         p[0] = p[1]
         return
-    newPlace = ST.get_temp()
+    newPlace = ST.get_temp_var()
     p[0] = {
         'place' : newPlace,
         'type' : 'TYPE_ERROR'
     }
-    if p[1]['type']=='TYPE_ERROR' or p[3]['type']=='TYPE_ERROR':
+    if p[1]['type'] == 'TYPE_ERROR' or p[3]['type'] == 'TYPE_ERROR':
         return
-    if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
-        p[3] =ResolveRHSArray(p[3])
-        p[1] =ResolveRHSArray(p[1])
-        TAC.emit(newPlace,p[1]['place'],p[3]['place'],p[2])
+
+    if p[1]['type'].upper() == 'INT' and p[3]['type'].upper() == 'INT':
+        p[3] = ResolveRHSArray(p[3])
+        p[1] = ResolveRHSArray(p[1])
+        TAC.emit(newPlace, p[1]['place'], p[3]['place'], p[2])
         p[0]['type'] = 'INT'
     else:
         TAC.error("Error: integer value is needed")
@@ -1062,9 +1091,11 @@ def p_ShiftExpression(p):
     | ShiftExpression L_SHIFT AdditiveExpression
     | ShiftExpression R_SHIFT AdditiveExpression
     '''
-    if(len(p)==2):
+    if len(p) == 2:
         p[0] = p[1]
-        return
+    else:
+        print(p[1], "--")
+        print(p[3], "--")
     rules_store.append(p.slice)
 
 def p_RelationalExpression(p):
@@ -1082,7 +1113,7 @@ def p_RelationalExpression(p):
     l1 = TAC.new_label()
     l2 = TAC.new_label()
     l3 = TAC.new_label()
-    newPlace = ST.get_temp()
+    newPlace = ST.get_temp_var()
     p[0]={
         'place' : newPlace,
         'type' : 'TYPE_ERROR'
@@ -1154,7 +1185,7 @@ def p_EqualityExpression(p):
     l1 = TAC.new_label()
     l2 = TAC.new_label()
     l3 = TAC.new_label()
-    newPlace = ST.get_temp()
+    newPlace = ST.get_temp_var()
     p[0]={
         'place' : newPlace,
         'type' : 'TYPE_ERROR'
@@ -1198,7 +1229,7 @@ def p_AndExpression(p):
     if(len(p)==2):
         p[0] = p[1]
         return
-    newPlace = ST.get_temp()
+    newPlace = ST.get_temp_var()
     p[0] = {
         'place' : newPlace,
         'type' : 'TYPE_ERROR'
@@ -1222,7 +1253,7 @@ def p_ExclusiveOrExpression(p):
     if(len(p)==2):
         p[0] = p[1]
         return
-    newPlace = ST.get_temp()
+    newPlace = ST.get_temp_var()
     p[0] = {
         'place' : newPlace,
         'type' : 'TYPE_ERROR'
@@ -1246,7 +1277,7 @@ def p_InclusiveOrExpression(p):
     if(len(p)==2):
         p[0] = p[1]
         return
-    newPlace = ST.get_temp()
+    newPlace = ST.get_temp_var()
     p[0] = {
         'place' : newPlace,
         'type' : 'TYPE_ERROR'
@@ -1270,7 +1301,7 @@ def p_ConditionalAndExpression(p):
     if(len(p)==2):
         p[0] = p[1]
         return
-    newPlace = ST.get_temp()
+    newPlace = ST.get_temp_var()
     p[0] = {
         'place' : newPlace,
         'type' : 'TYPE_ERROR'
@@ -1295,7 +1326,7 @@ def p_ConditionalOrExpression(p):
     if(len(p)==2):
         p[0] = p[1]
         return
-    newPlace = ST.get_temp()
+    newPlace = ST.get_temp_var()
     p[0] = {
         'place' : newPlace,
         'type' : 'TYPE_ERROR'
@@ -1334,9 +1365,21 @@ def p_Assignment(p):
     '''
     Assignment : LeftHandSide AssignmentOperator AssignmentExpression
     '''
+    print(p[1])
+    print(p[3])
     if 'access_type' not in p[1].keys():
-        # name
-        pass
+        # LHS is a simple ID
+        attributes = ST.lookup(p[1]['place'])
+        if attributes == None:
+            raise Exception('Undeclared Variable Used: %s' %(p[1]['place']))
+
+        if 'place' in p[3].keys():
+            TAC.emit(p[1]['place'], p[3]['place'], '', p[2])
+        else:
+            if attributes['type'].upper() == p[3]['type'].upper():
+                TAC.emit(p[1]['idVal'], p[3]['place'], '', p[2])
+            else:
+                raise Exception("Type Mismatch for symbol: %s" %(p[3]['place']))
     elif p[1]['access_type'] == 'array_access':
         # LHS is array
         pass
@@ -1443,7 +1486,15 @@ def main():
     file_out = inputfile.split('/')[-1].split('.')[0]
     code = open(inputfile, 'r').read()
     code += "\n"
-    parser.parse(code, debug=0)
+    try:
+        d = int(sys.argv[2])
+    except:
+        d = 0
+    parser.parse(code, debug=d)
+
+    print("******************")
+    for i in TAC.code_list:
+        print(i)
 
 
 if __name__ == "__main__":

@@ -9,3 +9,6 @@ class TAC:
     def new_label(self):
         self.label_count += 1
         return "label_" + str(self.label_count)
+
+    def error(self, msg):
+        pass
