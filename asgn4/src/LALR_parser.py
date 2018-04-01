@@ -1486,6 +1486,7 @@ def main():
     file_out = inputfile.split('/')[-1].split('.')[0]
     code = open(inputfile, 'r').read()
     code += "\n"
+
     try:
         d = int(sys.argv[2])
     except:
