@@ -1496,6 +1496,7 @@ def main():
     print("******************")
     for i in TAC.code_list:
         print(i)
+    TAC.generate()
 
 
 if __name__ == "__main__":

@@ -14,8 +14,8 @@ class TAC:
         pass
 
     def generate(self):
-        for line_no in range(1,len(code_list)+1):
-            instruction = code_list[line_no - 1]
+        for line_no in range(1,len(self.code_list)+1):
+            instruction = self.code_list[line_no - 1]
             if instruction[3] in ['*', '/', '%', '+', '-', '>>', '<<', '&', '|', '^']:
                 if instruction[2] == '1':
                     print(str(line_no) + ", ++ , " + str(instruction[1]) + ", " + str(instruction[1]))
