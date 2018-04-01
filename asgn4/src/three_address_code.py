@@ -37,3 +37,7 @@ class TAC:
                 print(str(line_no) + ", " + str(instruction[0]) + ", " + str(instruction[1]))
             elif instruction[0] == 'label' or instruction[0] == 'func':
                 print(str(line_no) + ", label, " + str(instruction[1]))
+            elif instruction[0] == 'call':
+                print(str(line_no) + ", call, " + str(instruction[1]))
+            elif instruction[0] == 'print':
+                print(str(line_no) + ", print, " + str(instruction[1]))

@@ -369,6 +369,8 @@ def p_MethodDeclaration(p):
     '''
     MethodDeclaration : MethodHeader MethodBody
     '''
+    TAC.emit('ret','','','')
+    # TAC.emit('label',p[1][0],'','')
     rules_store.append(p.slice)
 
 def p_MethodHeader(p):
@@ -889,6 +891,13 @@ def p_MethodInvocation(p):
     | SUPER DOT Identifier L_PAREN ArgumentList R_PAREN
     | SUPER DOT Identifier L_PAREN R_PAREN
     '''
+    if p[2] == '(':
+        if(p[1]['place'] == 'System.out.println'):
+            TAC.emit('print',p[3]['place'],'','')
+            p[0] = p[1]
+        else:
+            TAC.emit('call',p[1]['place'],'','')
+            p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_ArrayAccess(p):
