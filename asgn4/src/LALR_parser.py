@@ -370,6 +370,7 @@ def p_MethodDeclaration(p):
     MethodDeclaration : MethodHeader MethodBody
     '''
     TAC.emit('ret','','','')
+    ST.end_scope()
     # TAC.emit('label',p[1][0],'','')
     rules_store.append(p.slice)
 
@@ -388,18 +389,24 @@ def p_MethodHeader(p):
 
 def p_MethodDeclarator(p):
     '''
-    MethodDeclarator : Identifier L_PAREN R_PAREN Mark1
-    | Identifier L_PAREN FormalParameterList R_PAREN
+    MethodDeclarator : Identifier L_PAREN MethodDeclMark1 R_PAREN
+    | Identifier L_PAREN MethodDeclMark1 FormalParameterList R_PAREN
     '''
-    if len(p) == 5:
-        p[0] = [p[1]]
-        stackbegin.append(p[1])
-        stackend.append(p[1])
-        TAC.emit('label', p[1], '', '')
+    p[0] = [p[1]]
+    stackbegin.append(p[1])
+    stackend.append(p[1])
+    if len(p) == 6:
+        for parameter in p[4]:
+            ST.insert_in_sym_table('var',parameter['place'],parameter['type'])
+            TAC.emit('param',parameter['place'],'','')
+    TAC.emit('label', p[1], '', '')
     rules_store.append(p.slice)
 
-def p_Mark1(p):
-    '''Mark1 : '''
+def p_MehodDeclMark1(p):
+    '''
+    MethodDeclMark1 :
+    '''
+    ST.create_new_table(p[-2])
 
 def p_FormalParametersList(p):
     '''
@@ -407,13 +414,19 @@ def p_FormalParametersList(p):
     | FormalParameterList COMMA FormalParameter
     '''
     if len(p) == 2:
-        p[0] = p[1]
+        p[0] = [p[1]]
+    else:
+        p[0] = p[1] + [p[3]]
     rules_store.append(p.slice)
 
 def p_FormalParameter(p):
     '''
     FormalParameter : Type VariableDeclaratorId
     '''
+    p[0] = {
+        'place' : p[2][0],
+        'type' : p[1]['type']
+    }
     rules_store.append(p.slice)
 
 def p_Throws(p):
@@ -1550,6 +1563,7 @@ def main():
     for i in TAC.code_list:
         print(i)
     TAC.generate()
+    ST.print_scope_table()
 
 
 if __name__ == "__main__":
