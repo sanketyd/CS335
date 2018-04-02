@@ -695,15 +695,40 @@ def p_SwitchLabel(p):
 
 def p_WhileStatement(p):
     '''
-    WhileStatement : WHILE L_PAREN Expression R_PAREN Statement
+    WhileStatement : WHILE WhMark1 L_PAREN Expression R_PAREN WhMark2 Statement WhMark3
     '''
     rules_store.append(p.slice)
 
 def p_WhileStatementNoShortIf(p):
     '''
-    WhileStatementNoShortIf : WHILE L_PAREN Expression R_PAREN StatementNoShortIf
+    WhileStatementNoShortIf : WHILE WhMark1 L_PAREN Expression R_PAREN WhMark2 StatementNoShortIf WhMark3
     '''
     rules_store.append(p.slice)
+
+def p_WhMark1(p):
+    '''WhMark1 : '''
+    l1 = ST.make_label()
+    l2 = ST.make_label()
+    l3 = ST.make_label()
+    stackbegin.append(l1)
+    stackend.append(l3)
+    #ST.newScope()               #TODO question ? don't we need this ?
+    TAC.emit('label',l1,'','')
+    p[0]=[l1,l2,l3]
+
+def p_WhMark2(p):
+    '''WhMark2 : '''
+    TAC.emit('ifgoto',p[-2]['place'],'eq 0', p[-4][2])
+    TAC.emit('goto',p[-4][1],'','')
+    TAC.emit('label',p[-4][1],'','')
+
+def p_WhMark3(p):
+    '''WhMark3 : '''
+    TAC.emit('goto',p[-6][0],'','')
+    TAC.emit('label',p[-6][2],'','')
+    #ST.newScope()
+    stackbegin.pop()
+    stackend.pop()
 
 def p_DoStatement(p):
     '''
@@ -955,7 +980,7 @@ def p_PostfixExpression(p):
         if p[1]['isnotjustname'] == False:
             attributes = ST.lookup(p[1]['place'])
             if attributes == None:
-                raise Exception("Undeclared Variable Used: %s)" %(p[1]['idVal']))
+                raise Exception("Undeclared Variable Used: %s)" %(p[1]['place']))
             else:
                 p[0]['type'] = attributes['type']
                 p[0]['place'] = p[1]['place']
