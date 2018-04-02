@@ -398,8 +398,7 @@ def p_MethodDeclarator(p):
     stackend.append(p[1])
     if len(p) == 6:
         for parameter in p[4]:
-            ST.insert_in_sym_table('var',parameter['place'],parameter['type'])
-            TAC.emit('param',parameter['place'],'','')
+            ST.insert_in_sym_table('var',parameter['place'],parameter['type'].upper())
     TAC.emit('label', p[1], '', '')
     rules_store.append(p.slice)
 
@@ -581,6 +580,7 @@ def p_StatementWithoutTrailingSubstatement(p):
     | ThrowStatement
     | TryStatement
     '''
+    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_EmptyStatement(p):
@@ -618,6 +618,7 @@ def p_StatementExpression(p):
     | MethodInvocation
     | ClassInstanceCreationExpression
     '''
+    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_IfThenStatement(p):
@@ -821,6 +822,8 @@ def p_ReturnStatement(p):
     '''
     if(len(p)==3 and p[1]=='return'):
         TAC.emit('ret', '', '', '')
+    else:
+        TAC.emit('ret', p[2]['place'], '', '')
     rules_store.append(p.slice)
 
 def p_ThrowStatement(p):
@@ -893,7 +896,9 @@ def p_ArgumentList(p):
     | ArgumentList COMMA Expression
     '''
     if len(p) == 2:
-        p[0] = p[1]
+        p[0] = [p[1]]
+    else:
+        p[0] = p[1] + [p[3]]
     rules_store.append(p.slice)
 
 def p_ArrayCreationExpression(p):
@@ -958,6 +963,23 @@ def p_MethodInvocation(p):
     | SUPER DOT Identifier L_PAREN ArgumentList R_PAREN
     | SUPER DOT Identifier L_PAREN R_PAREN
     '''
+    #TODO: Other types of invocation
+    #Check return type of function in symbol table
+    #Check in symbol table
+    if p[2] == '(':
+        if p[1]['place'] == 'System.out.println':
+            if len(p) == 5:
+                for parameter in p[3]:
+                    TAC.emit('print',parameter['place'],'','')
+        else:
+            temp_var = ST.get_temp_var()
+            if len(p) == 5:
+                for parameter in p[3]:
+                    TAC.emit('param',parameter['place'],'','')
+            TAC.emit('call',p[1]['place'],temp_var,'')
+            p[0] = {
+                'place' : temp_var
+            }
     rules_store.append(p.slice)
 
 def p_ArrayAccess(p):
@@ -989,7 +1011,7 @@ def p_PostfixExpression(p):
         p[0]['type'] = p[1]['type']
         p[0]['is_var'] = False
 
-    elif 'place' in p[1].keys() and p[1]['is_var']:
+    elif 'place' in p[1].keys() and 'is_var' in p[1].keys() and p[1]['is_var']:
         attributes = ST.lookup(p[1]['place'])
         if attributes == None:
             raise Exception("Undeclared Variable Used: %s)" %(p[1]['place']))
@@ -998,8 +1020,10 @@ def p_PostfixExpression(p):
             p[0]['place'] = p[1]['place']
 
     elif 'place' in p[1].keys():
-        p[0]['type'] = p[1]['type']
-        p[0]['place'] = p[1]['place']
+        p[0] = p[1]
+        #TODO: Temporarily removing to run method invocation
+        # p[0]['type'] = p[1]['type']
+        # p[0]['place'] = p[1]['place']
 
     if 'is_array' in p[1].keys():
         p[0]['is_array'] = True

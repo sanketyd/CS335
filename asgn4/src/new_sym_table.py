@@ -19,7 +19,7 @@ class ScopeTable:
         '''
         new_sym_table = SymbolTable(new_label, self.curr_scope)
         self.curr_scope = new_label
-        self.scope_and_table_map[curr_cope] = new_sym_table
+        self.scope_and_table_map[self.curr_scope] = new_sym_table
 
 
     def end_scope(self):
@@ -62,6 +62,10 @@ class ScopeTable:
         else:
             pass
 
+    def print_scope_table(self):
+        for key, val in self.scope_and_table_map.items():
+            val.print_table()
+
 
 
 class SymbolTable:
@@ -101,3 +105,8 @@ class SymbolTable:
 
     def add_block(self, block_name):
         self.blocks.add(block_name)
+
+    def print_table(self):
+        print("Scope: %s \nSymbols:" %(self.scope))
+        for key, val in self.symbols.items():
+            print(key,val)
