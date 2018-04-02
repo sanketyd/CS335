@@ -36,6 +36,7 @@ def p_Literal(p):
     '''
     p[0] = p[1]
     p[0]['idVal'] = str(p[0]['idVal'])
+    p[0]['is_var'] = False
     rules_store.append(p.slice)
 
 def p_IntegerConst(p):
@@ -124,7 +125,7 @@ def p_IntegralType(p):
     | CHAR
     '''
     p[0] = {
-        'type' : p[1]
+        'type' : p[1].upper()
     }
     rules_store.append(p.slice)
 
@@ -133,7 +134,7 @@ def p_FloatingPointType(p):
     | DOUBLE
     '''
     p[0] = {
-        'type' : p[1]
+        'type' : p[1].upper()
     }
     rules_store.append(p.slice)
 
@@ -153,10 +154,10 @@ def p_ClassType(p):
 
 def p_ArrayType(p):
     ''' ArrayType : PrimitiveType L_SQBR R_SQBR
-    | Name L_SQBR R_SQBR Mark2
+    | Name L_SQBR R_SQBR
     | ArrayType L_SQBR R_SQBR
     '''
-    if len(p) == 3:
+    if 'place' not in p[1].keys():
         p[0] = {
             'type' : p[1]['type'] + p[2] + p[3]
         }
@@ -166,9 +167,6 @@ def p_ArrayType(p):
         }
 
     rules_store.append(p.slice)
-
-def p_Mark2(p):
-    ''' Mark2 : '''
 
 # Section 19.5
 def p_Name(p):
@@ -181,7 +179,6 @@ def p_SimpleName(p):
     ''' SimpleName : Identifier'''
     p[0] = {
         'place' : p[1],
-        'isnotjustname' : False
     }
     rules_store.append(p.slice)
 
@@ -316,6 +313,9 @@ def p_FieldDeclaration(p):
     FieldDeclaration : Modifiers Type VariableDeclarators STMT_TERMINATOR
     | Type VariableDeclarators STMT_TERMINATOR
     '''
+    if len(p) == 4:
+        for i in p[2]:
+            ST.insert_in_sym_table('symbol', idName=i, idType=p[1]['type'])
     rules_store.append(p.slice)
 
 def p_VariableDeclarators(p):
@@ -341,7 +341,7 @@ def p_VariableDeclarator(p):
     elif type(p[3]) != type({}):
         return
     if 'is_array' in p[3].keys() and p[3]['is_array']:
-        TAC.emit('declare',p[1][0],p[3]['place'],p[3]['type'])
+        TAC.emit('declare', p[1][0], p[3]['place'], p[3]['type'])
         p[0] = p[1]
     else:
         TAC.emit(p[1][0], p[3]['place'], '', p[2])
@@ -369,8 +369,6 @@ def p_MethodDeclaration(p):
     '''
     MethodDeclaration : MethodHeader MethodBody
     '''
-    TAC.emit('ret','','','')
-    # TAC.emit('label',p[1][0],'','')
     rules_store.append(p.slice)
 
 def p_MethodHeader(p):
@@ -866,9 +864,10 @@ def p_ArrayCreationExpression(p):
     '''
     if len(p) == 4:
         p[0] = {
-            'type' : p[2],
+            'type' : p[2]['type'],
             'place'  : p[3]['place'],
-            'is_array' : True
+            'is_array' : True,
+            'is_var' : p[3]['is_var']
         }
     rules_store.append(p.slice)
 
@@ -918,13 +917,6 @@ def p_MethodInvocation(p):
     | SUPER DOT Identifier L_PAREN ArgumentList R_PAREN
     | SUPER DOT Identifier L_PAREN R_PAREN
     '''
-    if p[2] == '(':
-        if(p[1]['place'] == 'System.out.println'):
-            TAC.emit('print',p[3]['place'],'','')
-            p[0] = p[1]
-        else:
-            TAC.emit('call',p[1]['place'],'','')
-            p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_ArrayAccess(p):
@@ -932,12 +924,14 @@ def p_ArrayAccess(p):
     ArrayAccess : Name L_SQBR Expression R_SQBR
     | PrimaryNoNewArray L_SQBR Expression R_SQBR
     '''
-    p[0] = p[1]
+    p[0] = {}
+    attributes = ST.lookup(p[1]['place'])
+
     p[0]['access_type'] = 'array_access'
-    p[0]['type'] = ST.get_attribute(p[0]['idVal'], 'type')
-    p[0]['place'] = ST.get_attribute(p[0]['idVal'], 'place')
+    p[0]['type'] = attributes['type']
+    p[0]['place'] = p[1]['place']
     p[0]['index_place'] = p[3]['place']
-    del p[0]['idVal']
+
     rules_store.append(p.slice)
 
 def p_PostfixExpression(p):
@@ -948,17 +942,26 @@ def p_PostfixExpression(p):
     | PostDecrementExpression
     '''
     p[0] = {}
+    print(p[1])
     if 'idVal' in p[1].keys():
         p[0]['place'] = p[1]['idVal']
         p[0]['type'] = p[1]['type']
+        p[0]['is_var'] = False
+
+    elif 'place' in p[1].keys() and p[1]['is_var']:
+        attributes = ST.lookup(p[1]['place'])
+        if attributes == None:
+            raise Exception("Undeclared Variable Used: %s)" %(p[1]['place']))
+        else:
+            p[0]['type'] = attributes['type']
+            p[0]['place'] = p[1]['place']
+
     elif 'place' in p[1].keys():
-        if p[1]['isnotjustname'] == False:
-            attributes = ST.lookup(p[1]['place'])
-            if attributes == None:
-                raise Exception("Undeclared Variable Used: %s)" %(p[1]['idVal']))
-            else:
-                p[0]['type'] = attributes['type']
-                p[0]['place'] = p[1]['place']
+        p[0]['type'] = p[1]['type']
+        p[0]['place'] = p[1]['place']
+
+    if 'is_array' in p[1].keys():
+        p[0]['is_array'] = True
     rules_store.append(p.slice)
 
 def p_PostIncrementExpression(p):
@@ -1002,11 +1005,12 @@ def p_UnaryExpression(p):
         return
     rules_store.append(p.slice)
 
+# Checked
 def p_PreIncrementExpression(p):
     '''
     PreIncrementExpression : INCREMENT UnaryExpression
     '''
-    if(p[2]['type']=='INT'):
+    if(p[2]['type'].upper() == 'INT'):
         TAC.emit(p[2]['place'],p[2]['place'],'1','+')
         p[0] = {
             'place' : p[2]['place'],
@@ -1017,6 +1021,7 @@ def p_PreIncrementExpression(p):
 
     rules_store.append(p.slice)
 
+# Checked
 def p_PreDecrementExpression(p):
     '''
     PreDecrementExpression : DECREMENT UnaryExpression
@@ -1051,6 +1056,7 @@ def p_CastExpression(p):
     '''
     rules_store.append(p.slice)
 
+# Checked
 def p_MultiplicativeExpression(p):
     '''
     MultiplicativeExpression : UnaryExpression
@@ -1094,6 +1100,7 @@ def p_MultiplicativeExpression(p):
             TAC.error('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
     rules_store.append(p.slice)
 
+# Checked
 def p_AdditiveExpression(p):
     '''
     AdditiveExpression : MultiplicativeExpression
@@ -1120,6 +1127,7 @@ def p_AdditiveExpression(p):
         TAC.error("Error: integer value is needed")
     rules_store.append(p.slice)
 
+# Checked
 def p_ShiftExpression(p):
     '''
     ShiftExpression : AdditiveExpression
@@ -1148,6 +1156,7 @@ def p_ShiftExpression(p):
 
     rules_store.append(p.slice)
 
+# Checked
 def p_RelationalExpression(p):
     '''
     RelationalExpression : ShiftExpression
@@ -1224,6 +1233,7 @@ def p_RelationalExpression(p):
         TAC.error('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
     rules_store.append(p.slice)
 
+# Checked
 def p_EqualityExpression(p):
     '''
     EqualityExpression : RelationalExpression
@@ -1273,7 +1283,7 @@ def p_EqualityExpression(p):
             TAC.emit('label', l3, '', '')
             p[0]['type'] = 'INT'
     else:
-        TAC.error('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
+        raise Exception('Only INT type comparisions supported: ' + p[1]['place'] + ' and' + p[3]['place'])
     rules_store.append(p.slice)
 
 def p_AndExpression(p):
@@ -1488,50 +1498,6 @@ def p_error(p):
     print("Syntax Error in line %d" %(p.lineno))
 
 
-def format_print(LHS, RHS, index):
-    print("<p>")
-    for i in range(len(LHS)):
-        if i == index:
-            print("<span style='color:red; font-weight:bold'>" + str(LHS[i]) + "</span>")
-        else:
-            if str(type(LHS[i])) == "<class 'ply.yacc.YaccSymbol'>":
-                print(str(LHS[i]), end=" ")
-            else:
-                print("<span style='color:blue'>" + str(LHS[i].value) + "</span>", end=" ")
-
-    print("&emsp;<span style='color:black; font-weight:bold;'>----></span>&emsp;", end=" ")
-
-    for i in range(len(RHS)):
-        if str(type(RHS[i])) == "<class 'ply.yacc.YaccSymbol'>":
-            print(str(RHS[i]), end=" ")
-        else:
-            print("<span style='color:blue'>" + str(RHS[i].value) + "</span>", end=" ")
-
-    print("</p>")
-
-
-def html_output(rules_store):
-    print("<head><title> Parser for JAVA </title></head>")
-    print("<body style='padding: 20px'> <h1> Rightmost Derrivation </h1> <hr>")
-    LHS = [rules_store[-1][0]]
-    RHS = []
-    # print the derivation
-    for rule in rules_store[::-1]:
-        try:
-            index = LHS.index(rule[0])
-        except ValueError:
-            print("Some Error occured")
-            return
-
-        # store the derrivation of the current rule
-        part_RHS = [symbol for symbol in rule[1:]]
-        RHS = RHS[:index] + part_RHS + RHS[index + 1:]
-        format_print(LHS, RHS, index)
-        LHS = RHS
-
-    print("</body>")
-
-
 def main():
     tokens = lexer.tokens
     parser = yacc.yacc()
@@ -1549,7 +1515,8 @@ def main():
     print("******************")
     for i in TAC.code_list:
         print(i)
-    TAC.generate()
+
+    # TAC.generate()
 
 
 if __name__ == "__main__":
