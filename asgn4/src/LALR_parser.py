@@ -173,6 +173,7 @@ def p_Name(p):
     ''' Name : SimpleName
     | QualifiedName'''
     p[0] = p[1]
+    p[0]['is_var'] = True
     rules_store.append(p.slice)
 
 def p_SimpleName(p):
