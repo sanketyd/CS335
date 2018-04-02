@@ -2,7 +2,7 @@ class Wh {
 
 	int main(){
 	int raktim = 5;
-	while (1)
+	for (;raktim > 5;)
         {
         int c, a = 4, b;
         c =  b * 3 + a;
