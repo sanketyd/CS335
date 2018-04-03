@@ -671,17 +671,39 @@ def p_IfMark4(p):
 
 def p_SwitchStatement(p):
     '''
-    SwitchStatement : SWITCH L_PAREN Expression R_PAREN SwitchBlock
+    SwitchStatement : SWITCH L_PAREN Expression R_PAREN SwMark2 SwitchBlock SwMark3
     '''
+    if not p[3]['type'] == 'INT':
+        raise Exception("Switch clause only supports Integer types")
     rules_store.append(p.slice)
+
+def p_SwMark2(p):
+    ''' SwMark2 : '''
+    l1 = ST.make_label()
+    l2 = ST.make_label()
+    stackend.append(l1)
+    TAC.emit('goto', l2, '', '')
+    p[0] = [l1, l2]
+
+def p_SwMark3(p):
+    ''' SwMark3 : '''
+    TAC.emit('label', p[-2][1], '', '')
+    for i in range(len(p[-1]['labels'])):
+        label = p[-1]['labels'][i]
+        exp = p[-1]['expressions'][i]
+        if exp == '':
+            ## TODO: Handle default case label separately
+            pass
+        else:
+            TAC.emit('ifgoto', p[-4]['place'], 'eq ' + exp, label)
+    TAC.emit('label', p[-2][0], '', '')
 
 def p_SwitchBlock(p):
     '''
     SwitchBlock : BLOCK_OPENER BLOCK_CLOSER
-    | BLOCK_OPENER SwitchBlockStatementGroups SwitchLabels BLOCK_CLOSER
     | BLOCK_OPENER SwitchBlockStatementGroups BLOCK_CLOSER
-    | BLOCK_OPENER SwitchLabels BLOCK_CLOSER
     '''
+    p[0] = p[2]
     rules_store.append(p.slice)
 
 def p_SwitchBlockStatementGroups(p):
@@ -689,27 +711,45 @@ def p_SwitchBlockStatementGroups(p):
     SwitchBlockStatementGroups : SwitchBlockStatementGroup
     | SwitchBlockStatementGroups SwitchBlockStatementGroup
     '''
+    p[0] = {
+        'expressions' : [],
+        'labels' : []
+    }
+    if len(p) == 2:
+        p[0]['expressions'].append(p[1]['expression'])
+        p[0]['labels'].append(p[1]['label'])
+    else:
+        p[0]['expressions'] = p[1]['expressions'] + [p[2]['expression']]
+        p[0]['labels'] = p[1]['labels'] + [p[2]['label']]
     rules_store.append(p.slice)
 
 def p_SwitchBlockStatementGroup(p):
     '''
-    SwitchBlockStatementGroup : SwitchLabels BlockStatements
+    SwitchBlockStatementGroup : SwitchLabel BlockStatements
     '''
-    rules_store.append(p.slice)
-
-def p_SwitchLabels(p):
-    '''
-    SwitchLabels : SwitchLabel
-    | SwitchLabels SwitchLabel
-    '''
+    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_SwitchLabel(p):
     '''
-    SwitchLabel : CASE ConstantExpression COLON
-    | DEFAULT COLON
+    SwitchLabel : SwMark1 CASE ConstantExpression COLON
+    | SwMark1 DEFAULT COLON
     '''
+    p[0] = {}
+    if len(p) == 5:
+        if not p[3]['type'] == 'INT':
+            raise Exception("Only Integers allowed for case comparisions")
+        p[0]['expression'] = p[3]['place']
+    else:
+        p[0]['expression'] = ''
+    p[0]['label'] = p[1]
     rules_store.append(p.slice)
+
+def p_SwMark1(p):
+    ''' SwMark1 : '''
+    l = ST.make_label()
+    TAC.emit('label', l, '', '')
+    p[0] = l
 
 def p_WhileStatement(p):
     '''
@@ -730,7 +770,7 @@ def p_WhMark1(p):
     l3 = ST.make_label()
     stackbegin.append(l1)
     stackend.append(l3)
-    ST.create_new_table(l1)               #TODO question ? don't we need this ?
+    ST.create_new_table(l1)
     TAC.emit('label',l1,'','')
     p[0]=[l1,l2,l3]
 
@@ -778,6 +818,7 @@ def p_doWhMark3(p):
     ST.end_scope()
     stackbegin.pop()
     stackend.pop()
+
 def p_ForStatement(p):
     '''
     ForStatement : FOR FoMark0 L_PAREN ForInit STMT_TERMINATOR FoMark1 Expression STMT_TERMINATOR ForUpdate R_PAREN FoMark2 Statement FoMark3
@@ -1641,9 +1682,9 @@ def main():
         d = 0
     parser.parse(code, debug=d)
 
-    print("******************")
-    for i in TAC.code_list:
-        print(i)
+    # print("******************")
+    # for i in TAC.code_list:
+        # print(i)
     TAC.generate()
     # ST.print_scope_table()
 
