@@ -692,7 +692,7 @@ def p_SwMark3(p):
         label = p[-1]['labels'][i]
         exp = p[-1]['expressions'][i]
         if exp == '':
-            ## TODO: Handle default case label separately
+            TAC.emit('goto', label, '', '')
             pass
         else:
             TAC.emit('ifgoto', p[-4]['place'], 'eq ' + exp, label)
