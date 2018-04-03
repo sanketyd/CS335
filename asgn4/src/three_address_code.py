@@ -6,10 +6,6 @@ class TAC:
     def emit(self, dest, src1, src2, op):
         self.code_list.append([dest, src1, src2, op])
 
-    def new_label(self):
-        self.label_count += 1
-        return "label_" + str(self.label_count)
-
     def error(self, msg):
         pass
 
@@ -30,6 +26,7 @@ class TAC:
             elif instruction[0] == 'goto':
                 print(str(line_no) + ", " + str(instruction[0]) + ", " + str(instruction[1]))
             elif instruction[0] == 'ifgoto':
+                ## TODO: Check formatting; seems like we need to add extra arguments
                 print(str(line_no) + ", " + str(instruction[0]) + ", " + str(instruction[1]) + ", " + str(instruction[2]) + ", " + str(instruction[3]))
             elif instruction[0] == 'ret':
                 # There are 2 cases return a or just return type
