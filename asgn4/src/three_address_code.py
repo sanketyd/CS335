@@ -24,7 +24,7 @@ class TAC:
             elif instruction[3] == '=':
                 print(str(line_no) + ", = , " + str(instruction[0]) + ", " + str(instruction[1]))
             elif instruction[0] == 'declare':
-                prinnt("Currently unimplemented: DECLARATION")
+                print("Currently unimplemented: DECLARATION")
             elif instruction[3] in ['and', 'or', 'xor']:
                 print("Currently unimplemented: LOGICAL OPS")
             elif instruction[0] == 'goto':
