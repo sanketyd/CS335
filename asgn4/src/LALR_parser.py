@@ -693,7 +693,6 @@ def p_SwMark3(p):
         exp = p[-1]['expressions'][i]
         if exp == '':
             TAC.emit('goto', label, '', '')
-            pass
         else:
             TAC.emit('ifgoto', p[-4]['place'], 'eq ' + exp, label)
     TAC.emit('label', p[-2][0], '', '')
@@ -703,6 +702,7 @@ def p_SwitchBlock(p):
     SwitchBlock : BLOCK_OPENER BLOCK_CLOSER
     | BLOCK_OPENER SwitchBlockStatementGroups BLOCK_CLOSER
     '''
+    ## TODO: Handle start and end of new scope
     p[0] = p[2]
     rules_store.append(p.slice)
 
