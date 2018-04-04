@@ -790,7 +790,7 @@ def p_WhMark3(p):
 
 def p_DoStatement(p):
     '''
-    DoStatement : DO doWhMark3 Statement WHILE doWhMark1 L_PAREN Expression R_PAREN doWhMark2 STMT_TERMINATOR
+    DoStatement : DO doWhMark1 Statement WHILE doWhMark2 L_PAREN Expression R_PAREN doWhMark3 STMT_TERMINATOR
     '''
     rules_store.append(p.slice)
 
@@ -805,16 +805,16 @@ def p_doWhMark1(p):
     TAC.emit('label',l1,'','')
     p[0]=[l1,l2,l3]
 
-def p_doWhMark2(p):
-    '''doWhMark2 : '''
-    TAC.emit('ifgoto',p[-2]['place'],'eq 0', p[-4][2])
-    TAC.emit('goto',p[-4][1],'','')
-    TAC.emit('label',p[-4][1],'','')
-
 def p_doWhMark3(p):
     '''doWhMark3 : '''
-    TAC.emit('goto',p[-7][0],'','')
+    TAC.emit('ifgoto',p[-2]['place'],'eq 0', p[-7][2])
+    TAC.emit('goto',p[-7][1],'','')
     TAC.emit('label',p[-7][2],'','')
+    
+def p_doWhMark2(p):
+    '''doWhMark2 : '''
+    #TAC.emit('goto',p[-3][1],'','')
+    TAC.emit('label',p[-3][1],'','')
     ST.end_scope()
     stackbegin.pop()
     stackend.pop()

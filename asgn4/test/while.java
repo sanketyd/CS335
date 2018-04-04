@@ -4,12 +4,7 @@ class Wh {
         int raktim = 1;
         while (raktim < 5)
         {
-            int c, a = 4, b;
-            c =  b * 3 + a;
-            b++;
-            c = a + c + b;
-            c = b << 2;
-
+		raktim++;
 
         }
 
