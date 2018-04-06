@@ -3,7 +3,16 @@ import sys
 import ply.lex as lex
 import ply.yacc as yacc
 import lexer
+from copy import deepcopy
+from three_address_code import TAC
+from new_sym_table import ScopeTable
+from node import Node
 
+TAC = TAC()
+ST = ScopeTable()
+
+stackbegin = []
+stackend = []
 
 rules_store = []
 # Section 19.2
@@ -13,12 +22,6 @@ def p_Goal(p):
     rules_store.append(p.slice)
 
 # Section 19.3
-def p_Identfier(p):
-    '''Identifier : IDENTIFIER'''
-    p[0] = {
-        'place' : p[1],
-        'type' : 'Identifier'
-    }
 
 def p_Literal(p):
     ''' Literal : IntegerConst
@@ -27,87 +30,63 @@ def p_Literal(p):
     | StringConst
     | NullConst
     '''
-    p[0] = p[1]
+    p[0] = Node(val=str(p[1].val), is_var=False, Type=p[1].Type, category="Literal")
     rules_store.append(p.slice)
-
+    # TODO: bool constant
 
 def p_IntegerConst(p):
     '''
     IntegerConst : INT_CONSTANT
     '''
-    p[0] = {
-        'place' : p[1],
-        'type' : 'INT'
-    }
-
+    p[0] = Node(val=p[1], Type="INT")
 
 def p_FloatConst(p):
     '''
     FloatConst : FLOAT_CONSTANT
     '''
-    p[0] = {
-        'place' : p[1],
-        'type' : 'FLOAT'
-    }
-
+    p[0] = Node(val=p[1], Type="FLOAT")
 
 def p_CharConst(p):
     '''
     CharConst : CHAR_CONSTANT
     '''
-    p[0] = {
-        'place' : p[1],
-        'type' : 'CHAR'
-    }
-
+    p[0] = Node(val=p[1], Type="CHAR")
 
 def p_StringConst(p):
     '''
     StringConst : STR_CONSTANT
     '''
-    p[0] = {
-        'place' : p[1],
-        'type' : 'STR'
-    }
-
+    p[0] = Node(val=p[1], Type="STR")
 
 def p_NullConst(p):
     '''
     NullConst : NULL
     '''
-    p[0] = {
-        'place' : p[1],
-        'type' : 'NULL'
-    }
+    p[0] = Node(val=p[1], Type="NULL")
 
+def p_Identfier(p):
+    '''
+    Identifier : IDENTIFIER
+    '''
+    p[0] = Node(place=p[1], category="Identifier")
 # Section 19.4
 
 def p_Type(p):
     ''' Type : PrimitiveType
     | ReferenceType
     '''
-    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_PrimitiveType(p):
     ''' PrimitiveType : NumericType
     | BOOLEAN
     '''
-    if type(p[1]) == type(""):
-        p[0] = {
-            'place' : p[1],
-        }
-    else:
-        p[0] = p[1]
-
-    p[0]["type"] = "prim_type"
     rules_store.append(p.slice)
 
 def p_NumericType(p):
     ''' NumericType : IntegralType
     | FloatingPointType
     '''
-    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_IntegralType(p):
@@ -117,33 +96,24 @@ def p_IntegralType(p):
     | LONG
     | CHAR
     '''
-    p[0] = {
-        'place' : p[1],
-    }
     rules_store.append(p.slice)
 
 def p_FloatingPointType(p):
     ''' FloatingPointType : FLOAT
     | DOUBLE
     '''
-    p[0] = {
-        'place' : p[1],
-    }
     rules_store.append(p.slice)
 
 def p_ReferenceType(p):
     ''' ReferenceType : ArrayType
     | ClassType
     '''
-    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_ClassType(p):
     '''
     ClassType : Name
     '''
-    p[0] = p[1]
-    p[0]['type'] = 'ClassVarType'
     rules_store.append(p.slice)
 
 def p_ArrayType(p):
@@ -151,10 +121,6 @@ def p_ArrayType(p):
     | Name L_SQBR R_SQBR
     | ArrayType L_SQBR R_SQBR
     '''
-    p[0] = {
-        'place' : p[1]['place'] + p[2] + p[3],
-        'type' : "arr_type"
-    }
     rules_store.append(p.slice)
 
 # Section 19.5
@@ -162,21 +128,17 @@ def p_ArrayType(p):
 def p_Name(p):
     ''' Name : SimpleName
     | QualifiedName'''
-    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_SimpleName(p):
     ''' SimpleName : Identifier'''
-    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_QualifiedName(p):
     ''' QualifiedName : Name DOT Identifier'''
-    p[0] = {
-        'value' : p[1]['value'] + p[2] + p[3]['value'],
-        'is_name' : True
-    }
     rules_store.append(p.slice)
+
+
 
 # Section 19.6
 
@@ -252,7 +214,6 @@ def p_Modifier(p):
     | FINAL
     '''
     rules_store.append(p.slice)
-
 # Section 19.8
 
 def p_ClassDeclaration(p):
@@ -761,7 +722,6 @@ def p_ClassInstanceCreationExpression(p):
     ClassInstanceCreationExpression : NEW ClassType L_PAREN R_PAREN
     | NEW ClassType L_PAREN ArgumentList R_PAREN
     '''
-    p[0] = p[2]
     rules_store.append(p.slice)
 
 def p_ArgumentList(p):
@@ -769,8 +729,6 @@ def p_ArgumentList(p):
     ArgumentList : Expression
     | ArgumentList COMMA Expression
     '''
-    if len(p) == 2:
-        p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_ArrayCreationExpression(p):
@@ -780,12 +738,6 @@ def p_ArrayCreationExpression(p):
     | NEW ClassType DimExprs Dims
     | NEW ClassType DimExprs
     '''
-    if len(p) == 4:
-        p[0] = {
-            "type" : p[2]['place'],
-            'place' : p[3]['place'],
-            "is_array" : True
-        }
     rules_store.append(p.slice)
 
 def p_DimExprs(p):
@@ -793,19 +745,12 @@ def p_DimExprs(p):
     DimExprs : DimExpr
     | DimExprs DimExpr
     '''
-    if len(p) == 2:
-        p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_DimExpr(p):
     '''
     DimExpr : L_SQBR Expression R_SQBR
     '''
-    if p[2]["type"] == "INT":
-        p[0] = p[2]
-    else:
-        # TODO: raise error
-        pass
     rules_store.append(p.slice)
 
 def p_Dims(p):
@@ -813,10 +758,6 @@ def p_Dims(p):
     Dims : L_SQBR R_SQBR
     | Dims L_SQBR R_SQBR
     '''
-    if len(p) == 3:
-        p[0] = 1
-    else:
-        p[0] = 1 + p[1]
     rules_store.append(p.slice)
 
 def p_FieldAccess(p):
@@ -835,7 +776,6 @@ def p_MethodInvocation(p):
     | SUPER DOT Identifier L_PAREN ArgumentList R_PAREN
     | SUPER DOT Identifier L_PAREN R_PAREN
     '''
-    # TODO: emit instr to call the specified function
     rules_store.append(p.slice)
 
 def p_ArrayAccess(p):
@@ -983,14 +923,6 @@ def p_ConditionalOrExpression(p):
     ConditionalOrExpression : ConditionalAndExpression
     | ConditionalOrExpression LOGICAL_OR ConditionalAndExpression
     '''
-    # TODO TODO
-    if len(p) == 2:
-        p[0] = p[1]
-    else:
-        new_temp = sym_table.get_temp()
-        p[0] = {
-            'place' : new_temp,
-        }
     rules_store.append(p.slice)
 
 def p_ConditionalExpression(p):
@@ -998,11 +930,6 @@ def p_ConditionalExpression(p):
     ConditionalExpression : ConditionalOrExpression
     | ConditionalOrExpression QUESTION Expression COLON ConditionalExpression
     '''
-    if len(p) == 2:
-        p[0] = p[1]
-    else:
-        # TODO: handle ternary
-        pass
     rules_store.append(p.slice)
 
 def p_AssignmentExpression(p):
@@ -1011,19 +938,13 @@ def p_AssignmentExpression(p):
     | Assignment
     | LambdaExpression
     '''
-    if len(p) == 2:
-        # conditional expression encountered
-        p[0] = p[1]
-    elif len(p) == 3:
-        pass
-    else:
-        pass
     rules_store.append(p.slice)
 
 def p_Assignment(p):
     '''
     Assignment : LeftHandSide AssignmentOperator AssignmentExpression
     '''
+    rules_store.append(p.slice)
 
 def p_LeftHandSide(p):
     '''
@@ -1044,7 +965,6 @@ def p_AssignmentOperator(p):
     | LSHIFTEQ
     | RSHIFTEQ
     '''
-    p[0] = p[1]
     rules_store.append(p.slice)
     #To check if I missed something
 
@@ -1052,7 +972,6 @@ def p_Expression(p):
     '''
     Expression : AssignmentExpression
     '''
-    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_LambdaExpression(p):
@@ -1066,23 +985,21 @@ def p_ConstantExpression(p):
     '''
     ConstantExpression : Expression
     '''
-    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_error(p):
     print("Syntax Error in line %d" %(p.lineno))
 
 
-def custom_parse(inputfile):
+def main():
     tokens = lexer.tokens
     parser = yacc.yacc()
+    inputfile = sys.argv[1]
+    file_out = inputfile.split('/')[-1].split('.')[0]
     code = open(inputfile, 'r').read()
     code += "\n"
     parser.parse(code, debug=0)
-
-def main():
-    inputfile = sys.argv[1]
-    custom_parse(inputfile)
+    TAC.generate()
 
 
 if __name__ == "__main__":
