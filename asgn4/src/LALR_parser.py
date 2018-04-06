@@ -14,9 +14,6 @@ stackend = []
 
 rules_store = []
 
-def ResolveRHSArray(dictionary):
-    return dictionary
-
 # Section 19.2
 def p_Goal(p):
     '''Goal : CompilationUnit'''
@@ -152,9 +149,8 @@ def p_ClassType(p):
     rules_store.append(p.slice)
 
 def p_ArrayType(p):
-    ''' ArrayType : PrimitiveType L_SQBR R_SQBR
-    | Name L_SQBR R_SQBR
-    | ArrayType L_SQBR R_SQBR
+    ''' ArrayType : PrimitiveType Dims
+    | Name Dims
     '''
     if 'place' not in p[1].keys():
         p[0] = {
@@ -164,6 +160,8 @@ def p_ArrayType(p):
         p[0] = {
             'type' : p[1]['place'],
         }
+    p[0]['is_array'] = True
+    p[0]['arr_size'] = p[2]
     # TODO: handle multidim arrays
 
     rules_store.append(p.slice)
@@ -316,7 +314,7 @@ def p_FieldDeclaration(p):
     '''
     if len(p) == 4:
         for i in p[2]:
-            ST.insert_in_sym_table('symbol', idName=i, idType=p[1]['type'])
+            ST.insert_in_sym_table(idName=i, idType=p[1]['type'])
     rules_store.append(p.slice)
 
 def p_VariableDeclarators(p):
@@ -372,7 +370,7 @@ def p_MethodDeclaration(p):
     '''
     TAC.emit('ret','','','')
     ST.end_scope()
-    # TAC.emit('label',p[1][0],'','')
+    ST.insert_in_sym_table(p[1]['name'], p[1]['type'], is_func=True, args=p[1]['args'])
     rules_store.append(p.slice)
 
 def p_MethodHeader(p):
@@ -386,6 +384,24 @@ def p_MethodHeader(p):
     | VOID MethodDeclarator Throws
     | VOID MethodDeclarator
     '''
+    p[0] = {}
+    if len(p) == 5:
+        # ST.insert_in_sym_table(p[3]['name'], p[2]['type'], is_func=True, args=p[3]['args'])
+        # TODO
+        pass
+    elif len(p) == 4:
+        # TODO
+        pass
+    elif len(p) == 3:
+        p[0]['name'] = p[2]['name']
+        p[0]['args'] = p[2]['args']
+        if type(p[1]) == type({}):
+            if 'is_array' in p[1].keys():
+                p[0]['type'] = (p[1]['type'], p[1]['arr_size'])
+            else:
+                p[0]['type'] = (p[1]['type'], 0)
+        else:
+            p[0]['type'] = 'VOID'
     rules_store.append(p.slice)
 
 def p_MethodDeclarator(p):
@@ -393,12 +409,19 @@ def p_MethodDeclarator(p):
     MethodDeclarator : Identifier L_PAREN MethodDeclMark1 R_PAREN
     | Identifier L_PAREN MethodDeclMark1 FormalParameterList R_PAREN
     '''
-    p[0] = [p[1]]
+    p[0] = {
+        'name' : p[1],
+    }
+    if len(p) == 6:
+        p[0]['args'] = p[4]
+    else:
+        p[0]['args'] = []
+
     stackbegin.append(p[1])
     stackend.append(p[1])
     if len(p) == 6:
         for parameter in p[4]:
-            ST.insert_in_sym_table('var',parameter['place'],parameter['type'].upper())
+            ST.insert_in_sym_table(parameter['place'],parameter['type'].upper())
     TAC.emit('label', p[1], '', '')
     rules_store.append(p.slice)
 
@@ -489,8 +512,6 @@ def p_ExplicitConstructorInvocation(p):
     '''
     rules_store.append(p.slice)
 
-# Section 19.9 is about Interfaces
-
 # Section 19.10
 def p_ArrayInitializer(p):
     '''
@@ -541,10 +562,10 @@ def p_LocalVariableDeclaration(p):
     LocalVariableDeclaration : Type VariableDeclarators
     '''
     for i in p[2]:
-        if '[]' not in p[1]['type']:
-            ST.insert_in_sym_table('symbol', idName=i, idType=p[1]['type'])
+        if 'is_array' not in p[1].keys():
+            ST.insert_in_sym_table(idName=i, idType=p[1]['type'])
         else:
-            ST.insert_in_sym_table('symbol', idName=i, idType=p[1]['type'], is_array=True)
+            ST.insert_in_sym_table(idName=i, idType=p[1]['type'], is_array=True, arr_size=p[1]['arr_size'])
     rules_store.append(p.slice)
 
 def p_Statement(p):
@@ -810,7 +831,7 @@ def p_doWhMark3(p):
     TAC.emit('ifgoto',p[-2]['place'],'eq 0', p[-7][2])
     TAC.emit('goto',p[-7][1],'','')
     TAC.emit('label',p[-7][2],'','')
-    
+
 def p_doWhMark2(p):
     '''doWhMark2 : '''
     #TAC.emit('goto',p[-3][1],'','')
@@ -970,7 +991,6 @@ def p_Finally(p):
     '''
     rules_store.append(p.slice)
 
-
 # Section 19.12
 def p_Primary(p):
     '''
@@ -1014,11 +1034,10 @@ def p_ArgumentList(p):
 
 def p_ArrayCreationExpression(p):
     '''
-    ArrayCreationExpression : NEW PrimitiveType DimExprs Dims
-    | NEW PrimitiveType DimExprs
-    | NEW ClassType DimExprs Dims
+    ArrayCreationExpression : NEW PrimitiveType DimExprs
     | NEW ClassType DimExprs
     '''
+    print(p[3])
     if len(p) == 4:
         p[0] = {
             'type' : p[2]['type'],
@@ -1682,11 +1701,11 @@ def main():
         d = 0
     parser.parse(code, debug=d)
 
-    # print("******************")
-    # for i in TAC.code_list:
-        # print(i)
-    TAC.generate()
-    # ST.print_scope_table()
+    print("******************")
+    for i in TAC.code_list:
+        print(i)
+    # TAC.generate()
+    ST.print_scope_table()
 
 
 if __name__ == "__main__":
