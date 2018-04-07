@@ -367,12 +367,18 @@ def p_VariableInitializer(p):
 
 def p_MethodDeclaration(p):
     '''
-    MethodDeclaration : MethodHeader MethodBody
+    MethodDeclaration : MethodHeader MethodDeclMark2 MethodBody
     '''
     TAC.emit('ret','','','')
     ST.end_scope()
-    ST.insert_in_sym_table(p[1]['name'], p[1]['type'], is_func=True, args=p[1]['args'])
     rules_store.append(p.slice)
+
+def p_MehodDeclMark2(p):
+    '''
+    MethodDeclMark2 :
+    '''
+    par_scope = ST.get_parent_scope()
+    ST.insert_in_sym_table(p[-1]['name'], p[-1]['type'], is_func=True, args=p[-1]['args'], scope=par_scope)
 
 def p_MethodHeader(p):
     '''
@@ -422,7 +428,7 @@ def p_MethodDeclarator(p):
     stackend.append(p[1])
     if len(p) == 6:
         for parameter in p[4]:
-            ST.insert_in_sym_table(parameter['place'],parameter['type'].upper())
+            ST.insert_in_sym_table(parameter['place'],parameter['type'])
     TAC.emit('label', p[1], '', '')
     rules_store.append(p.slice)
 
@@ -564,8 +570,12 @@ def p_LocalVariableDeclaration(p):
     '''
     for i in p[2]:
         if 'is_array' not in p[1].keys():
+            if len(i) == 2:
+                raise Exception("Array cannot be assigned to a primitive type")
             ST.insert_in_sym_table(idName=i, idType=p[1]['type'])
         else:
+            if len(i) == 1:
+                raise Exception("Primitive types cannot be assigned to array")
             if len(i[1]) != int(p[1]['arr_size']):
                 raise Exception("Dimension mismatch for array: %s" %(i[0]))
             ST.insert_in_sym_table(idName=i[0], idType=p[1]['type'], is_array=True, arr_size=i[1])
@@ -958,6 +968,12 @@ def p_ReturnStatement(p):
     if(len(p)==3 and p[1]=='return'):
         TAC.emit('ret', '', '', '')
     else:
+        to_return = ST.lookup(ST.curr_scope, is_func=True)['ret_type']
+        curr_returned = ST.lookup(p[2]['place'])
+        if to_return[0] != curr_returned['type']:
+            raise Exception("Wrong return type in %s" %(ST.curr_scope))
+        if 'is_array' in curr_returned.keys() and len(curr_returned['arr_size']) != to_return[1]:
+            raise Exception("Dimension mismatch in return statement in %s" %(ST.curr_scope))
         TAC.emit('ret', p[2]['place'], '', '')
     rules_store.append(p.slice)
 
@@ -1096,10 +1112,12 @@ def p_MethodInvocation(p):
     | SUPER DOT Identifier L_PAREN ArgumentList R_PAREN
     | SUPER DOT Identifier L_PAREN R_PAREN
     '''
-    #TODO: Other types of invocation
-    #Check return type of function in symbol table
-    #Check in symbol table
+    # Check return type of function in symbol table
     if p[2] == '(':
+        attributes = ST.lookup(p[1]['place'], is_func=True)
+        if attributes == None:
+            raise Exception("Undeclared function used: %s" %(p[1]['place']))
+
         if p[1]['place'] == 'System.out.println':
             if len(p) == 5:
                 for parameter in p[3]:
@@ -1107,7 +1125,14 @@ def p_MethodInvocation(p):
         else:
             temp_var = ST.get_temp_var()
             if len(p) == 5:
-                for parameter in p[3]:
+                prototype = attributes['params']
+                if len(prototype) != len(p[3]):
+                    raise Exception("Wrong number of arguments to function call: %s" %(p[1]['place']))
+                for i in range(len(p[3])):
+                    parameter = p[3][i]
+                    proto = prototype[i]
+                    if parameter['type'] != proto['type']:
+                        raise Exception("Wrong type of arg passed to function %s; got %s but expected %s" %(p[1]['place'], parameter['type'], proto['type']))
                     TAC.emit('param',parameter['place'],'','')
             TAC.emit('call',p[1]['place'],temp_var,'')
             p[0] = {
@@ -1188,7 +1213,7 @@ def p_PostIncrementExpression(p):
     '''
     PostIncrementExpression : PostfixExpression INCREMENT
     '''
-    if p[1]['type'].upper() == 'INT':
+    if p[1]['type'] == 'INT':
         TAC.emit(p[1]['place'], p[1]['place'], '1', '+')
         p[0] = {
             'place' : p[1]['place'],
@@ -1202,7 +1227,7 @@ def p_PostDecrementExpression(p):
     '''
     PostDecrementExpression : PostfixExpression DECREMENT
     '''
-    if p[1]['type'].upper() == 'INT':
+    if p[1]['type'] == 'INT':
         TAC.emit(p[1]['place'], p[1]['place'], '1', '-')
         p[0] = {
             'place' : p[1]['place'],
@@ -1230,7 +1255,7 @@ def p_PreIncrementExpression(p):
     '''
     PreIncrementExpression : INCREMENT UnaryExpression
     '''
-    if(p[2]['type'].upper() == 'INT'):
+    if(p[2]['type'] == 'INT'):
         TAC.emit(p[2]['place'],p[2]['place'],'1','+')
         p[0] = {
             'place' : p[2]['place'],
@@ -1295,25 +1320,19 @@ def p_MultiplicativeExpression(p):
     if p[1]['type'] == 'TYPE_ERROR' or p[3]['type'] == 'TYPE_ERROR':
         return
     if p[2] == '*':
-        if p[1]['type'].upper() == 'INT' and p[3]['type'].upper() == 'INT' :
-            # p[3] = ResolveRHSArray(p[3])
-            # p[1] = ResolveRHSArray(p[1])
+        if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
             TAC.emit(newPlace,p[1]['place'], p[3]['place'], p[2])
             p[0]['type'] = 'INT'
         else:
             TAC.error('Error: Type is not compatible'+p[1]['place']+','+p[3]['place']+'.')
     elif p[2] == '/' :
         if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
-            # p[3] = ResolveRHSArray(p[3])
-            # p[1] = ResolveRHSArray(p[1])
             TAC.emit(newPlace, p[1]['place'], p[3]['place'], p[2])
             p[0]['type'] = 'INT'
         else:
             TAC.error('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
     elif p[2] == '%':
         if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
-            # p[3] =ResolveRHSArray(p[3])
-            # p[1] =ResolveRHSArray(p[1])
             TAC.emit(newPlace,p[1]['place'],p[3]['place'],p[2])
             p[0]['type'] = 'INT'
         else:
@@ -1338,9 +1357,7 @@ def p_AdditiveExpression(p):
     if p[1]['type'] == 'TYPE_ERROR' or p[3]['type'] == 'TYPE_ERROR':
         return
 
-    if p[1]['type'].upper() == 'INT' and p[3]['type'].upper() == 'INT':
-        # p[3] = ResolveRHSArray(p[3])
-        # p[1] = ResolveRHSArray(p[1])
+    if p[1]['type'] == 'INT' and p[3]['type'] == 'INT':
         TAC.emit(newPlace, p[1]['place'], p[3]['place'], p[2])
         p[0]['type'] = 'INT'
     else:
@@ -1366,9 +1383,7 @@ def p_ShiftExpression(p):
     if p[1]['type'] == 'TYPE_ERROR' or p[3]['type'] == 'TYPE_ERROR':
         return
 
-    if p[1]['type'].upper() == 'INT' and p[3]['type'].upper() == 'INT':
-        # p[3] = ResolveRHSArray(p[3])
-        # p[1] = ResolveRHSArray(p[1])
+    if p[1]['type'] == 'INT' and p[3]['type'] == 'INT':
         TAC.emit(newPlace, p[1]['place'], p[3]['place'], p[2])
         p[0]['type'] = 'INT'
     else:
@@ -1400,10 +1415,8 @@ def p_RelationalExpression(p):
     if p[1]['type']=='TYPE_ERROR' or p[3]['type']=='TYPE_ERROR':
         return
 
-    if p[1]['type'].upper() == 'INT' and p[3]['type'].upper() == 'INT' :
+    if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
         if p[2]=='>':
-            # p[3] = ResolveRHSArray(p[3])
-            # p[1] = ResolveRHSArray(p[1])
             TAC.emit('ifgoto', p[1]['place'], 'gt ' + p[3]['place'], l2)
             TAC.emit('label', l1, '', '')
             TAC.emit(newPlace, '0', '', '=')
@@ -1413,8 +1426,6 @@ def p_RelationalExpression(p):
             TAC.emit('label', l3, '', '')
             p[0]['type'] = 'INT'
         elif p[2]=='>=':
-            # p[3] = ResolveRHSArray(p[3])
-            # p[1] = ResolveRHSArray(p[1])
             TAC.emit('ifgoto', p[1]['place'], 'geq ' + p[3]['place'], l2)
             TAC.emit('label', l1, '', '')
             TAC.emit(newPlace, '0', '', '=')
@@ -1424,8 +1435,6 @@ def p_RelationalExpression(p):
             TAC.emit('label', l3, '', '')
             p[0]['type'] = 'INT'
         elif p[2]=='<':
-            # p[3] = ResolveRHSArray(p[3])
-            # p[1] = ResolveRHSArray(p[1])
             TAC.emit('ifgoto', p[1]['place'], 'lt ' + p[3]['place'], l2)
             TAC.emit('label', l1, '', '')
             TAC.emit(newPlace, '0', '', '=')
@@ -1435,8 +1444,6 @@ def p_RelationalExpression(p):
             TAC.emit('label', l3, '', '')
             p[0]['type'] = 'INT'
         elif p[2]=='<=':
-            # p[3] = ResolveRHSArray(p[3])
-            # p[1] = ResolveRHSArray(p[1])
             TAC.emit('ifgoto', p[1]['place'], 'leq ' + p[3]['place'], l2)
             TAC.emit('label', l1, '', '')
             TAC.emit(newPlace, '0', '', '=')
@@ -1471,8 +1478,6 @@ def p_EqualityExpression(p):
         return
     if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
         if(p[2][0]=='='):
-            # p[3] = ResolveRHSArray(p[3])
-            # p[1] = ResolveRHSArray(p[1])
             TAC.emit('ifgoto', p[1]['place'], 'eq ' + p[3]['place'], l2)
             TAC.emit('label', l1, '', '')
             TAC.emit(newPlace, '0', '', '=')
@@ -1482,8 +1487,6 @@ def p_EqualityExpression(p):
             TAC.emit('label', l3, '', '')
             p[0]['type'] = 'INT'
         else:
-            # p[3] = ResolveRHSArray(p[3])
-            # p[1] = ResolveRHSArray(p[1])
             TAC.emit('ifgoto', p[1]['place'], 'neq '+ p[3]['place'], l2)
             TAC.emit('label', l1, '', '')
             TAC.emit(newPlace, '0', '', '=')
@@ -1512,8 +1515,6 @@ def p_AndExpression(p):
     if p[1]['type']=='TYPE_ERROR' or p[3]['type']=='TYPE_ERROR':
         return
     if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
-        # p[3] =ResolveRHSArray(p[3])
-        # p[1] =ResolveRHSArray(p[1])
         TAC.emit(newPlace,p[1]['place'],p[3]['place'],'&')
         p[0]['type'] = 'INT'
     else:
@@ -1536,8 +1537,6 @@ def p_ExclusiveOrExpression(p):
     if p[1]['type']=='TYPE_ERROR' or p[3]['type']=='TYPE_ERROR':
         return
     if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
-        # p[3] =ResolveRHSArray(p[3])
-        # p[1] =ResolveRHSArray(p[1])
         TAC.emit(newPlace,p[1]['place'],p[3]['place'],'^')
         p[0]['type'] = 'INT'
     else:
@@ -1560,8 +1559,6 @@ def p_InclusiveOrExpression(p):
     if p[1]['type']=='TYPE_ERROR' or p[3]['type']=='TYPE_ERROR':
         return
     if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
-        # p[3] = ResolveRHSArray(p[3])
-        # p[1] = ResolveRHSArray(p[1])
         TAC.emit(newPlace, p[1]['place'], p[3]['place'], '|')
         p[0]['type'] = 'INT'
     else:
@@ -1585,8 +1582,6 @@ def p_ConditionalAndExpression(p):
         p[0]=p[1]
         return
     if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
-        # p[3] =ResolveRHSArray(p[3])
-        # p[1] =ResolveRHSArray(p[1])
         l1 = ST.make_label()
         TAC.emit(newPlace,p[1]['place'],'','=')
         TAC.emit('ifgoto',p[1]['place'],'eq 0',l1)
@@ -1613,8 +1608,6 @@ def p_ConditionalOrExpression(p):
     if p[1]['type']=='TYPE_ERROR' or p[3]['type']=='TYPE_ERROR':
         return
     if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
-        # p[3] = ResolveRHSArray(p[3])
-        # p[1] = ResolveRHSArray(p[1])
         l1 = ST.make_label()
         TAC.emit(newPlace,p[1]['place'],'','=')
         TAC.emit('ifgoto',p[1]['place'],'eq 1',l1)
@@ -1728,8 +1721,8 @@ def main():
     print("******************")
     for i in TAC.code_list:
         print(i)
-    TAC.generate()
-    ST.print_scope_table()
+    # TAC.generate()
+    # ST.print_scope_table()
 
 
 if __name__ == "__main__":
