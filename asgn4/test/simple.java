@@ -1,10 +1,11 @@
 class Debug {
+    int add(int a, int b) {
+        return a + b;
+    }
     int main() {
-        int c, a = 4, b;
-        c =  b * 3 + a;
-        b++;
-        c = a + c + b;
-        c = b << 2;
-	c = b & c;
+        //int a = 20;
+        int a = 19;
+        int [][] b = new int[a][20];
+        b[2][3] = 10;
     }
 }
