@@ -1129,15 +1129,22 @@ def p_ArrayAccess(p):
     indexes = p[2]
     if not len(indexes) == len(attributes['arr_size']):
         raise Exception("Not a valid indexing for array %s" %(p[1]['place']))
-    t = ST.get_temp_var()
-    ## TODO: calculate index according to dims
-    print(attributes)
-    index = 1
+
+    arr_size = attributes['arr_size']
+    address_indices = p[2]
+    t2 = ST.get_temp_var()
+    TAC.emit(t2, address_indices[0], '', '=')
+    for i in range(1, len(address_indices)):
+        TAC.emit(t2, t2, arr_size[i], '*')
+        TAC.emit(t2, t2, address_indices[i], '+')
+    index = t2
+
     src = p[1]['place'] + '[' + str(index) + ']'
-    TAC.emit(t, src, '', '=')
+    t1 = ST.get_temp_var()
+    TAC.emit(t1, src, '', '=')
 
     p[0]['type'] = attributes['type']
-    p[0]['place'] = t
+    p[0]['place'] = t1
     p[0]['access_type'] = 'array'
     p[0]['name'] = p[1]['place']
     p[0]['index'] = str(index)
