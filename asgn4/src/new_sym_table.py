@@ -45,22 +45,27 @@ class ScopeTable:
         self.label_counter = self.label_counter + 1
         return prefix + str(self.label_counter)
 
+    def get_parent_scope(self):
+        return self.scope_and_table_map[self.curr_scope].parent
+
     def get_temp_var(self):
         prefix = "CS335_GROUP7_var_"
         self.temp_var_counter += 1
         return prefix + str(self.temp_var_counter)
 
-    def insert_in_sym_table(self, idName, idType, is_func=False, args=None, is_array=False, arr_size=None):
+    def insert_in_sym_table(self, idName, idType, is_func=False, args=None, is_array=False, arr_size=None, scope=None):
         '''
         Universal function to insert any symbol into current symbol table
         Returns a string representing the new scope name if a new block is
         about to start; otherwise returns None
         '''
+        if scope == None:
+            scope = self.curr_scope
         if not is_func:
-            self.scope_and_table_map[self.curr_scope].add_symbol(idName, idType, is_array, arr_size)
+            self.scope_and_table_map[scope].add_symbol(idName, idType, is_array, arr_size)
             return None
         else:
-            self.scope_and_table_map[self.curr_scope].add_function(idName, idType, args)
+            self.scope_and_table_map[scope].add_function(idName, idType, args)
 
     def print_scope_table(self):
         for key, val in self.scope_and_table_map.items():
@@ -107,6 +112,7 @@ class SymbolTable:
         self.blocks.add(block_name)
 
     def print_table(self):
+        print("Parent: %s" %(self.parent))
         print("Scope: %s \nSymbols:" %(self.scope))
         for key, val in self.symbols.items():
             print(key,val)
