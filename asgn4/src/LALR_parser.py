@@ -525,6 +525,7 @@ def p_ArrayInitializer(p):
     ArrayInitializer : BLOCK_OPENER VariableInitializers BLOCK_CLOSER
     | BLOCK_OPENER BLOCK_CLOSER
     '''
+    ## TODO
     rules_store.append(p.slice)
 
 def p_VariableInitializers(p):
@@ -574,11 +575,14 @@ def p_LocalVariableDeclaration(p):
                 raise Exception("Array cannot be assigned to a primitive type")
             ST.insert_in_sym_table(idName=i, idType=p[1]['type'])
         else:
-            if len(i) == 1:
-                raise Exception("Primitive types cannot be assigned to array")
-            if len(i[1]) != int(p[1]['arr_size']):
-                raise Exception("Dimension mismatch for array: %s" %(i[0]))
-            ST.insert_in_sym_table(idName=i[0], idType=p[1]['type'], is_array=True, arr_size=i[1])
+            if type(i) != type(' '):
+                if len(i) == 1:
+                    raise Exception("Primitive types cannot be assigned to array")
+                if len(i[1]) != int(p[1]['arr_size']):
+                    raise Exception("Dimension mismatch for array: %s" %(i[0]))
+                ST.insert_in_sym_table(idName=i[0], idType=p[1]['type'], is_array=True, arr_size=i[1])
+            else:
+                ST.insert_in_sym_table(idName=i, idType=p[1]['type'], is_array=True, arr_size=0)
     rules_store.append(p.slice)
 
 def p_Statement(p):
@@ -970,10 +974,14 @@ def p_ReturnStatement(p):
     else:
         to_return = ST.lookup(ST.curr_scope, is_func=True)['ret_type']
         curr_returned = ST.lookup(p[2]['place'])
-        if to_return[0] != curr_returned['type']:
-            raise Exception("Wrong return type in %s" %(ST.curr_scope))
-        if 'is_array' in curr_returned.keys() and len(curr_returned['arr_size']) != to_return[1]:
-            raise Exception("Dimension mismatch in return statement in %s" %(ST.curr_scope))
+        if curr_returned != None:
+            if to_return[0] != curr_returned['type']:
+                raise Exception("Wrong return type in %s" %(ST.curr_scope))
+            if 'is_array' in curr_returned.keys() and len(curr_returned['arr_size']) != to_return[1]:
+                raise Exception("Dimension mismatch in return statement in %s" %(ST.curr_scope))
+        elif curr_returned == None:
+            if p[2]['type'] != to_return[0] or to_return[1] != 0:
+                raise Exception("Wrong return type in %s" %(ST.curr_scope))
         TAC.emit('ret', p[2]['place'], '', '')
     rules_store.append(p.slice)
 
