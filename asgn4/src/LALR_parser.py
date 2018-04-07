@@ -339,10 +339,11 @@ def p_VariableDeclarator(p):
         return
 
     if 'is_array' in p[3].keys() and p[3]['is_array']:
-        arr_size = 1
+        t = ST.get_temp_var()
+        TAC.emit(t, '1', '', '=')
         for i in p[3]['place']:
-            arr_size *= int(i)
-        TAC.emit('declare', p[1], str(arr_size), p[3]['type'])
+            TAC.emit(t, t, i, '*')
+        TAC.emit('declare', p[1], t, p[3]['type'])
         p[0] = (p[1], p[3]['place'])
     else:
         TAC.emit(p[1][0], p[3]['place'], '', p[2])
@@ -1130,9 +1131,8 @@ def p_ArrayAccess(p):
         raise Exception("Not a valid indexing for array %s" %(p[1]['place']))
     t = ST.get_temp_var()
     ## TODO: calculate index according to dims
-    arr_size = [int(i) for i in attributes['arr_size']]
-    address_indices = [int(i) for i in p[2]]
-    index = address_indices[0] * arr_size[0] + address_indices[1]
+    print(attributes)
+    index = 1
     src = p[1]['place'] + '[' + str(index) + ']'
     TAC.emit(t, src, '', '=')
 
