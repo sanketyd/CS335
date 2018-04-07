@@ -50,7 +50,7 @@ class ScopeTable:
         self.temp_var_counter += 1
         return prefix + str(self.temp_var_counter)
 
-    def insert_in_sym_table(self, category, idName, idType, is_func=False, is_array=False, arr_size=None):
+    def insert_in_sym_table(self, idName, idType, is_func=False, args=None, is_array=False, arr_size=None):
         '''
         Universal function to insert any symbol into current symbol table
         Returns a string representing the new scope name if a new block is
@@ -60,7 +60,7 @@ class ScopeTable:
             self.scope_and_table_map[self.curr_scope].add_symbol(idName, idType, is_array, arr_size)
             return None
         else:
-            pass
+            self.scope_and_table_map[self.curr_scope].add_function(idName, idType, args)
 
     def print_scope_table(self):
         for key, val in self.scope_and_table_map.items():
@@ -92,7 +92,7 @@ class SymbolTable:
         }
 
 
-    def add_function(self, func_name, params=None, ret_type=None):
+    def add_function(self, func_name, ret_type=None, params=None):
         if func_name in self.functions.keys():
             raise Exception('Function %s redeclared, check your program' %(func_name))
 
@@ -110,3 +110,7 @@ class SymbolTable:
         print("Scope: %s \nSymbols:" %(self.scope))
         for key, val in self.symbols.items():
             print(key,val)
+        print("Functions:")
+        for key, val in self.functions.items():
+            print(key,val)
+        print("*************************")
