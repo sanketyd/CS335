@@ -162,8 +162,6 @@ def p_ArrayType(p):
         }
     p[0]['is_array'] = True
     p[0]['arr_size'] = p[2]
-    # TODO: handle multidim arrays
-
     rules_store.append(p.slice)
 
 # Section 19.5
@@ -323,9 +321,9 @@ def p_VariableDeclarators(p):
     | VariableDeclarators COMMA VariableDeclarator
     '''
     if len(p) == 2:
-        p[0] = p[1]
+        p[0] = [p[1]]
     else:
-        p[0] = p[1] + p[3]
+        p[0] = p[1] + [p[3]]
 
     rules_store.append(p.slice)
 
@@ -339,9 +337,13 @@ def p_VariableDeclarator(p):
         return
     elif type(p[3]) != type({}):
         return
+
     if 'is_array' in p[3].keys() and p[3]['is_array']:
-        TAC.emit('declare', p[1][0], p[3]['place'], p[3]['type'])
-        p[0] = p[1]
+        arr_size = 1
+        for i in p[3]['place']:
+            arr_size *= int(i)
+        TAC.emit('declare', p[1], str(arr_size), p[3]['type'])
+        p[0] = (p[1], p[3]['place'])
     else:
         TAC.emit(p[1][0], p[3]['place'], '', p[2])
         p[0] = p[1]
@@ -350,10 +352,8 @@ def p_VariableDeclarator(p):
 def p_VariableDeclaratorId(p):
     '''
     VariableDeclaratorId : Identifier
-    | VariableDeclaratorId L_SQBR R_SQBR
     '''
-    if len(p) == 2:
-        p[0] = [p[1]]
+    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_VariableInitializer(p):
@@ -565,7 +565,9 @@ def p_LocalVariableDeclaration(p):
         if 'is_array' not in p[1].keys():
             ST.insert_in_sym_table(idName=i, idType=p[1]['type'])
         else:
-            ST.insert_in_sym_table(idName=i, idType=p[1]['type'], is_array=True, arr_size=p[1]['arr_size'])
+            if len(i[1]) != int(p[1]['arr_size']):
+                raise Exception("Dimension mismatch for array: %s" %(i[0]))
+            ST.insert_in_sym_table(idName=i[0], idType=p[1]['type'], is_array=True, arr_size=i[1])
     rules_store.append(p.slice)
 
 def p_Statement(p):
@@ -1037,13 +1039,11 @@ def p_ArrayCreationExpression(p):
     ArrayCreationExpression : NEW PrimitiveType DimExprs
     | NEW ClassType DimExprs
     '''
-    print(p[3])
     if len(p) == 4:
         p[0] = {
             'type' : p[2]['type'],
-            'place'  : p[3]['place'],
+            'arr_size' : p[3],
             'is_array' : True,
-            'is_var' : p[3]['is_var']
         }
     rules_store.append(p.slice)
 
@@ -1053,9 +1053,9 @@ def p_DimExprs(p):
     | DimExprs DimExpr
     '''
     if len(p) == 2:
-        p[0] = p[1]
+        p[0] = [p[1]]
     else:
-        pass
+        p[0] = p[1] + [p[2]]
     rules_store.append(p.slice)
 
 def p_DimExpr(p):
@@ -1063,9 +1063,9 @@ def p_DimExpr(p):
     DimExpr : L_SQBR Expression R_SQBR
     '''
     if p[2]['type'] == 'INT':
-        p[0] = p[2]
+        p[0] = p[2]['place']
     else:
-        TAC.error("Error : Array declaration requires a size as integer : " + p[2]['place'])
+        raise Exception("Array declaration requires a size as integer : " + p[2]['place'])
     rules_store.append(p.slice)
 
 def p_Dims(p):
@@ -1116,24 +1116,31 @@ def p_MethodInvocation(p):
 
 def p_ArrayAccess(p):
     '''
-    ArrayAccess : Name L_SQBR Expression R_SQBR
-    | PrimaryNoNewArray L_SQBR Expression R_SQBR
+    ArrayAccess : Name DimExprs
     '''
     p[0] = {}
     attributes = ST.lookup(p[1]['place'])
     if attributes == None:
         raise Exception("Undeclared Symbol Used: %s" %(p[1]['place']))
+    if not 'is_array' in attributes or not attributes['is_array']:
+        raise Exception("Only array type can be indexed : %s" %(p[1]['place']))
+
+    indexes = p[2]
+    if not len(indexes) == len(attributes['arr_size']):
+        raise Exception("Not a valid indexing for array %s" %(p[1]['place']))
     t = ST.get_temp_var()
-    ## TODO: Handle multidim arrays
-    index = p[3]['place']
-    src = p[1]['place'] + '[' + index + ']'
+    ## TODO: calculate index according to dims
+    arr_size = [int(i) for i in attributes['arr_size']]
+    address_indices = [int(i) for i in p[2]]
+    index = address_indices[0] * arr_size[0] + address_indices[1]
+    src = p[1]['place'] + '[' + str(index) + ']'
     TAC.emit(t, src, '', '=')
 
     p[0]['type'] = attributes['type']
     p[0]['place'] = t
     p[0]['access_type'] = 'array'
     p[0]['name'] = p[1]['place']
-    p[0]['index'] = index
+    p[0]['index'] = str(index)
 
     rules_store.append(p.slice)
 
@@ -1164,7 +1171,9 @@ def p_PostfixExpression(p):
         # p[0]['type'] = p[1]['type']
         # p[0]['place'] = p[1]['place']
 
-    if 'is_array' in p[1].keys():
+    elif 'is_array' in p[1].keys():
+        p[0]['place'] = p[1]['arr_size']
+        p[0]['type'] = p[1]['type']
         p[0]['is_array'] = True
     rules_store.append(p.slice)
 
@@ -1704,8 +1713,9 @@ def main():
     print("******************")
     for i in TAC.code_list:
         print(i)
+    print("******************")
     # TAC.generate()
-    ST.print_scope_table()
+    # ST.print_scope_table()
 
 
 if __name__ == "__main__":
