@@ -5,6 +5,6 @@ class Debug {
         b++;
         c = a + c + b;
         c = b << 2;
-	c = b & c;
+	a = a && b || c;
     }
 }

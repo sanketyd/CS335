@@ -1498,7 +1498,7 @@ def p_AndExpression(p):
     if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
         # p[3] =ResolveRHSArray(p[3])
         # p[1] =ResolveRHSArray(p[1])
-        TAC.emit(newPlace,p[1]['place'],p[3]['place'],'and')
+        TAC.emit(newPlace,p[1]['place'],p[3]['place'],'&')
         p[0]['type'] = 'INT'
     else:
         TAC.error('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
@@ -1522,7 +1522,7 @@ def p_ExclusiveOrExpression(p):
     if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
         # p[3] =ResolveRHSArray(p[3])
         # p[1] =ResolveRHSArray(p[1])
-        TAC.emit(newPlace,p[1]['place'],p[3]['place'],'xor')
+        TAC.emit(newPlace,p[1]['place'],p[3]['place'],'^')
         p[0]['type'] = 'INT'
     else:
         TAC.error('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
@@ -1546,7 +1546,7 @@ def p_InclusiveOrExpression(p):
     if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
         # p[3] = ResolveRHSArray(p[3])
         # p[1] = ResolveRHSArray(p[1])
-        TAC.emit(newPlace, p[1]['place'], p[3]['place'], 'or')
+        TAC.emit(newPlace, p[1]['place'], p[3]['place'], '|')
         p[0]['type'] = 'INT'
     else:
         TAC.error('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
@@ -1571,7 +1571,11 @@ def p_ConditionalAndExpression(p):
     if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
         # p[3] =ResolveRHSArray(p[3])
         # p[1] =ResolveRHSArray(p[1])
-        TAC.emit(newPlace, p[1]['place'], p[3]['place'], 'and')
+        l1 = ST.make_label()
+        TAC.emit(newPlace,p[1]['place'],'','=')
+        TAC.emit('ifgoto',p[1]['place'],'eq 0',l1)
+        TAC.emit(newPlace, p[1]['place'], p[3]['place'], '&')
+        TAC.emit('label',l1,'','')
         p[0]['type'] = 'INT'
     else:
         TAC.error('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
@@ -1595,7 +1599,11 @@ def p_ConditionalOrExpression(p):
     if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
         # p[3] = ResolveRHSArray(p[3])
         # p[1] = ResolveRHSArray(p[1])
-        TAC.emit(newPlace, p[1]['place'], p[3]['place'], 'or')
+        l1 = ST.make_label()
+        TAC.emit(newPlace,p[1]['place'],'','=')
+        TAC.emit('ifgoto',p[1]['place'],'eq 1',l1)
+        TAC.emit(newPlace, p[1]['place'], p[3]['place'], '|')
+        TAC.emit('label',l1,'','')
         p[0]['type'] = 'INT'
     else:
         TAC.error('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
@@ -1704,7 +1712,7 @@ def main():
     print("******************")
     for i in TAC.code_list:
         print(i)
-    # TAC.generate()
+    TAC.generate()
     ST.print_scope_table()
 
 
