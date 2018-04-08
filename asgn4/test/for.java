@@ -5,6 +5,7 @@ class Wh {
 	int raktim = 5;
 	for (raktim = 1;raktim > 5;raktim++)
         {
+		a = a + 2;
         }
 
         /* Copy remaining elements of L[] if any */

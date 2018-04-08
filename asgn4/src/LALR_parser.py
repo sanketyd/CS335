@@ -308,11 +308,8 @@ def p_ClassMemberDeclaration(p):
 def p_FieldDeclaration(p):
     '''
     FieldDeclaration : Modifiers Type VariableDeclarators STMT_TERMINATOR
-    | Type VariableDeclarators STMT_TERMINATOR
+    | LocalVariableDeclaration STMT_TERMINATOR
     '''
-    if len(p) == 4:
-        for i in p[2]:
-            ST.insert_in_sym_table(idName=i, idType=p[1]['type'])
     rules_store.append(p.slice)
 
 def p_VariableDeclarators(p):
@@ -332,8 +329,9 @@ def p_VariableDeclarator(p):
     VariableDeclarator : VariableDeclaratorId
     | VariableDeclaratorId ASSIGN VariableInitializer
     '''
+    p[0] = {}
     if len(p) == 2:
-        p[0] = p[1]
+        p[0]['place'] = p[1]
         return
     elif type(p[3]) != type({}):
         return
@@ -344,10 +342,23 @@ def p_VariableDeclarator(p):
         for i in p[3]['place']:
             TAC.emit(t, t, i, '*')
         TAC.emit('declare', p[1], t, p[3]['type'])
-        p[0] = (p[1], p[3]['place'])
+        p[0]['place'] = (p[1], p[3]['place'])
+        p[0]['type'] = p[3]['type']
+    elif 'ret_type' in p[3].keys():
+        p[0]['place'] = p[1]
+        p[0]['type'] = p[3]['ret_type']
     else:
         TAC.emit(p[1][0], p[3]['place'], '', p[2])
-        p[0] = p[1]
+        p[0]['place'] = p[1]
+        if 'is_var' not in p[3]:
+            attributes = ST.lookup(p[3]['place'])
+            if 'is_array' in attributes and attributes['is_array']:
+                p[0]['is_array'] = True
+                p[0]['arr_size'] = attributes['arr_size']
+            else:
+                p[0]['is_array'] = False
+
+        p[0]['type'] = p[3]['type']
     rules_store.append(p.slice)
 
 def p_VariableDeclaratorId(p):
@@ -393,7 +404,6 @@ def p_MethodHeader(p):
     '''
     p[0] = {}
     if len(p) == 5:
-        # ST.insert_in_sym_table(p[3]['name'], p[2]['type'], is_func=True, args=p[3]['args'])
         # TODO
         pass
     elif len(p) == 4:
@@ -569,10 +579,18 @@ def p_LocalVariableDeclaration(p):
     '''
     LocalVariableDeclaration : Type VariableDeclarators
     '''
-    for i in p[2]:
+    for symbol in p[2]:
+        i = symbol['place']
+        t = symbol['type']
         if 'is_array' not in p[1].keys():
             if len(i) == 2:
                 raise Exception("Array cannot be assigned to a primitive type")
+            if len(t) == 2 and t[1] != 0:
+                raise Exception("Mismatch in function return: %s" %(i))
+            if type(t) == type(tuple([])) and t != p[1]['type']:
+                raise Exception("Type mismatch: Expected %s, but got %s" %(p[1]['type'], t[0]))
+            if type(t) != type(tuple([])) and t != p[1]['type']:
+                raise Exception("Type mismatch: Expected %s, but got %s" %(p[1]['type'], t))
             ST.insert_in_sym_table(idName=i, idType=p[1]['type'])
         else:
             if type(i) != type(' '):
@@ -580,8 +598,20 @@ def p_LocalVariableDeclaration(p):
                     raise Exception("Primitive types cannot be assigned to array")
                 if len(i[1]) != int(p[1]['arr_size']):
                     raise Exception("Dimension mismatch for array: %s" %(i[0]))
+                if type(t) != type(tuple([])) and t != p[1]['type']:
+                    raise Exception("Type mismatch: Expected %s, but got %s" %(p[1]['type'], t))
+                if type(t) == type(tuple([])) and t != p[1]['type']:
+                    raise Exception("Type mismatch: Expected %s, but got %s" %(p[1]['type'], t[0]))
                 ST.insert_in_sym_table(idName=i[0], idType=p[1]['type'], is_array=True, arr_size=i[1])
             else:
+                if type(t) == type(tuple([])) and t[0] != p[1]['type']:
+                    raise Exception("%s and %s types are not compatible" %(t[0], p[1]['type']))
+                if 'is_array' not in symbol:
+                    raise Exception("Array assignment was expected: %s" %(i))
+                if 'is_array' in symbol and t != p[1]['type']:
+                    raise Exception("%s and %s types are not compatible" %(t, p[1]['type']))
+                if 'is_array' in symbol and len(symbol['arr_size']) != p[1]['arr_size']:
+                    raise Exception("Array dimensions mismatch: %s" %(i))
                 ST.insert_in_sym_table(idName=i, idType=p[1]['type'], is_array=True, arr_size=0)
     rules_store.append(p.slice)
 
@@ -687,12 +717,12 @@ def p_IfMark1(p):
     TAC.emit('ifgoto', p[-2]['place'], 'eq 0', l2)
     TAC.emit('goto', l1, '', '')
     TAC.emit('label', l1, '', '')
-    # TODO: Create new scope here
+    ST.create_new_table(l1)
     p[0] = [l1, l2]
 
 def p_IfMark2(p):
     ''' IfMark2 : '''
-    ## TODO: End scope here
+    ST.end_scope()
     TAC.emit('label', p[-2][1], '', '')
 
 def p_IfMark3(p):
@@ -700,11 +730,12 @@ def p_IfMark3(p):
     l3 = ST.make_label()
     TAC.emit('goto', l3, '', '')
     TAC.emit('label', p[-3][1], '', '')
+    ST.create_new_table(p[-3][1])
     p[0] = [l3]
 
 def p_IfMark4(p):
     ''' IfMark4 : '''
-    ## TODO: end scope here
+    ST.end_scope()
     TAC.emit('label', p[-2][0], '', '')
 
 def p_SwitchStatement(p):
@@ -721,6 +752,7 @@ def p_SwMark2(p):
     l2 = ST.make_label()
     stackend.append(l1)
     TAC.emit('goto', l2, '', '')
+    ST.create_new_table(l2)
     p[0] = [l1, l2]
 
 def p_SwMark3(p):
@@ -734,13 +766,13 @@ def p_SwMark3(p):
         else:
             TAC.emit('ifgoto', p[-4]['place'], 'eq ' + exp, label)
     TAC.emit('label', p[-2][0], '', '')
+    ST.end_scope()
 
 def p_SwitchBlock(p):
     '''
     SwitchBlock : BLOCK_OPENER BLOCK_CLOSER
     | BLOCK_OPENER SwitchBlockStatementGroups BLOCK_CLOSER
     '''
-    ## TODO: Handle start and end of new scope
     p[0] = p[2]
     rules_store.append(p.slice)
 
@@ -1146,7 +1178,8 @@ def p_MethodInvocation(p):
                     TAC.emit('param',parameter['place'],'','')
             TAC.emit('call',p[1]['place'],temp_var,'')
             p[0] = {
-                'place' : temp_var
+                'place' : temp_var,
+                'ret_type' : attributes['ret_type']
             }
     rules_store.append(p.slice)
 
@@ -1653,6 +1686,10 @@ def p_Assignment(p):
     '''
     if 'access_type' not in p[1].keys():
         attributes = ST.lookup(p[1]['place'])
+        if attributes == None:
+            raise Exception("Undeclared variable used: %s" %(p[1]['place']))
+        if 'is_array' in attributes and attributes['is_array']:
+            raise Exception("Array '%s' not indexed properly" %(p[1]['place']))
         if attributes['type'] == p[3]['type']:
             TAC.emit(p[1]['place'], p[3]['place'], '', p[2])
         else:
@@ -1728,11 +1765,11 @@ def main():
         d = 0
     parser.parse(code, debug=d)
 
-    print("******************")
+    # print("******************")
     for i in TAC.code_list:
         print(i)
-    TAC.generate()
-    # ST.print_scope_table()
+    # TAC.generate()
+    ST.print_scope_table()
 
 
 if __name__ == "__main__":
