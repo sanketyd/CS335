@@ -1,4 +1,8 @@
 class Main{
+    int sum(int a, int b){
+        if(a==b) return a*2;
+        else return a+b;
+    }
     void main(){
         int a = 3;
         int b = 2;
@@ -15,9 +19,10 @@ class Main{
                         System.out.println(x);
                         x--;
                         for(int a = 0; a < 5; a++){
+                            int l = add(x,a);
                             System.out.println(a);
                         }
-                        System.out.prinln(a);
+                        System.out.println(a);
                     }
                     a = x*a;
                 }
