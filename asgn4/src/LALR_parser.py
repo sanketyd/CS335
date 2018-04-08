@@ -308,11 +308,8 @@ def p_ClassMemberDeclaration(p):
 def p_FieldDeclaration(p):
     '''
     FieldDeclaration : Modifiers Type VariableDeclarators STMT_TERMINATOR
-    | Type VariableDeclarators STMT_TERMINATOR
+    | LocalVariableDeclaration STMT_TERMINATOR
     '''
-    if len(p) == 4:
-        for i in p[2]:
-            ST.insert_in_sym_table(idName=i, idType=p[1]['type'])
     rules_store.append(p.slice)
 
 def p_VariableDeclarators(p):
@@ -596,8 +593,6 @@ def p_LocalVariableDeclaration(p):
                 raise Exception("Type mismatch: Expected %s, but got %s" %(p[1]['type'], t))
             ST.insert_in_sym_table(idName=i, idType=p[1]['type'])
         else:
-            # print(p[1])
-            # print(symbol)
             if type(i) != type(' '):
                 if len(i) == 1:
                     raise Exception("Primitive types cannot be assigned to array")
@@ -722,12 +717,12 @@ def p_IfMark1(p):
     TAC.emit('ifgoto', p[-2]['place'], 'eq 0', l2)
     TAC.emit('goto', l1, '', '')
     TAC.emit('label', l1, '', '')
-    # TODO: Create new scope here
+    ST.create_new_table(l1)
     p[0] = [l1, l2]
 
 def p_IfMark2(p):
     ''' IfMark2 : '''
-    ## TODO: End scope here
+    ST.end_scope()
     TAC.emit('label', p[-2][1], '', '')
 
 def p_IfMark3(p):
@@ -735,11 +730,12 @@ def p_IfMark3(p):
     l3 = ST.make_label()
     TAC.emit('goto', l3, '', '')
     TAC.emit('label', p[-3][1], '', '')
+    ST.create_new_table(p[-3][1])
     p[0] = [l3]
 
 def p_IfMark4(p):
     ''' IfMark4 : '''
-    ## TODO: end scope here
+    ST.end_scope()
     TAC.emit('label', p[-2][0], '', '')
 
 def p_SwitchStatement(p):
@@ -756,6 +752,7 @@ def p_SwMark2(p):
     l2 = ST.make_label()
     stackend.append(l1)
     TAC.emit('goto', l2, '', '')
+    ST.create_new_table(l2)
     p[0] = [l1, l2]
 
 def p_SwMark3(p):
@@ -769,13 +766,13 @@ def p_SwMark3(p):
         else:
             TAC.emit('ifgoto', p[-4]['place'], 'eq ' + exp, label)
     TAC.emit('label', p[-2][0], '', '')
+    ST.end_scope()
 
 def p_SwitchBlock(p):
     '''
     SwitchBlock : BLOCK_OPENER BLOCK_CLOSER
     | BLOCK_OPENER SwitchBlockStatementGroups BLOCK_CLOSER
     '''
-    ## TODO: Handle start and end of new scope
     p[0] = p[2]
     rules_store.append(p.slice)
 
@@ -1689,6 +1686,10 @@ def p_Assignment(p):
     '''
     if 'access_type' not in p[1].keys():
         attributes = ST.lookup(p[1]['place'])
+        if attributes == None:
+            raise Exception("Undeclared variable used: %s" %(p[1]['place']))
+        if 'is_array' in attributes and attributes['is_array']:
+            raise Exception("Array '%s' not indexed properly" %(p[1]['place']))
         if attributes['type'] == p[3]['type']:
             TAC.emit(p[1]['place'], p[3]['place'], '', p[2])
         else:
@@ -1764,11 +1765,11 @@ def main():
         d = 0
     parser.parse(code, debug=d)
 
-    print("******************")
+    # print("******************")
     for i in TAC.code_list:
         print(i)
-    TAC.generate()
-    # ST.print_scope_table()
+    # TAC.generate()
+    ST.print_scope_table()
 
 
 if __name__ == "__main__":
