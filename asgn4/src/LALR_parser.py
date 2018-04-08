@@ -1160,7 +1160,7 @@ def p_MethodInvocation(p):
     # Check return type of function in symbol table
     if p[2] == '(':
         attributes = ST.lookup(p[1]['place'], is_func=True)
-        if attributes == None:
+        if attributes == None and p[1]['place'] != "System.out.println":
             raise Exception("Undeclared function used: %s" %(p[1]['place']))
 
         if p[1]['place'] == 'System.out.println':
@@ -1767,7 +1767,7 @@ def main():
     print("******************")
     for i in TAC.code_list:
         print(i)
-    # TAC.generate()
+    TAC.generate()
     # ST.print_scope_table()
 
 
