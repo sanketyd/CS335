@@ -14,7 +14,7 @@ Src Description:
 We have used emit based method for IR generation.
 
 LALR_parser.py: Contains the parsers and all the semantic actions associated with each rule.
-new_symbol_table.py : Contains scopetable class and associated function
+new_sym_table.py : Contains scopetable class and associated function
 three_address_code.py : Contains code necessary for generating three address code
 
 
