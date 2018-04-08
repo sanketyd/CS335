@@ -21,10 +21,11 @@ three_address_code.py : Contains code necessary for generating three address cod
 
 Test Cases:
 
-test1.java: Normal class Declaration and lambda
-test2.java: Inheritance
-test3.java: MergeSort to test on big programs 
-test4.java: MergeSort with syntax errors
-test5.java: To test ternary operator and array declaration with new
-test6.java: To test big expressions
+dowhile.java: do while loop
+for.java: for loop
+while.java: while loop 
+break_continue.java: if-else, break, continue
+func_arr.java: function and array
+logops.java: logical ops
+matmult.java: Multiplication of 2d matrices
 
