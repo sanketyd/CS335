@@ -6,6 +6,7 @@ class ScopeTable:
         self.label_counter = 0
         self.temp_var_counter = 0
         self.curr_scope = 'start'
+        self.label_prefix = 'better_than_javac_l_'
         self.curr_sym_table = SymbolTable(self.curr_scope, parent=None)
         self.scope_and_table_map = dict()
         self.scope_and_table_map[self.curr_scope] = self.curr_sym_table
@@ -41,15 +42,15 @@ class ScopeTable:
 
 
     def make_label(self):
-        prefix = "CS335_GROUP7_label_"
         self.label_counter = self.label_counter + 1
-        return prefix + str(self.label_counter)
+        return self.label_prefix + str(self.label_counter)
 
     def get_parent_scope(self):
         return self.scope_and_table_map[self.curr_scope].parent
 
     def get_temp_var(self):
-        prefix = "CS335_GROUP7_var_"
+        prefix = "t"
+        # prefix = "CS335_GROUP7_var_"
         self.temp_var_counter += 1
         return prefix + str(self.temp_var_counter)
 

@@ -14,6 +14,8 @@ stackend = []
 
 rules_store = []
 
+global_return_type = None
+
 # Section 19.2
 def p_Goal(p):
     '''Goal : CompilationUnit'''
@@ -330,7 +332,6 @@ def p_VariableDeclarator(p):
     | VariableDeclaratorId ASSIGN VariableInitializer
     '''
     p[0] = {}
-    print(p[1])
     if len(p) == 2:
         p[0]['place'] = p[1]
         return
@@ -420,6 +421,8 @@ def p_MethodHeader(p):
                 p[0]['type'] = (p[1]['type'], 0)
         else:
             p[0]['type'] = 'VOID'
+        global global_return_type
+        global_return_type = p[0]['type']
     rules_store.append(p.slice)
 
 def p_MethodDeclarator(p):
@@ -440,7 +443,7 @@ def p_MethodDeclarator(p):
     if len(p) == 6:
         for parameter in p[4]:
             ST.insert_in_sym_table(parameter['place'],parameter['type'])
-    TAC.emit('label', p[1], '', '')
+    TAC.emit('func', p[1], '', '')
     rules_store.append(p.slice)
 
 def p_MehodDeclMark1(p):
@@ -1017,7 +1020,8 @@ def p_ReturnStatement(p):
     if(len(p)==3 and p[1]=='return'):
         TAC.emit('ret', '', '', '')
     else:
-        to_return = ST.lookup(ST.curr_scope, is_func=True)['ret_type']
+        # to_return = ST.lookup(ST.curr_scope, is_func=True)['ret_type']
+        to_return = global_return_type
         curr_returned = ST.lookup(p[2]['place'])
         if curr_returned != None:
             if to_return[0] != curr_returned['type']:
@@ -1276,7 +1280,7 @@ def p_PostIncrementExpression(p):
             'type' : 'INT'
         }
     else:
-        TAC.error("Error: increment operator can be used with integers only")
+        raise Exception("Error: increment operator can be used with integers only")
     rules_store.append(p.slice)
 
 def p_PostDecrementExpression(p):
@@ -1290,7 +1294,7 @@ def p_PostDecrementExpression(p):
             'type' : 'INT'
         }
     else:
-        TAC.error("Error: decrement operator can be used with integers only")
+        raise Exception("Error: decrement operator can be used with integers only")
     rules_store.append(p.slice)
 
 def p_UnaryExpression(p):
@@ -1318,7 +1322,7 @@ def p_PreIncrementExpression(p):
             'type' : 'INT'
         }
     else:
-        TAC.error("Error: increment operator can be used with integers only")
+        raise Exception("Error: increment operator can be used with integers only")
 
     rules_store.append(p.slice)
 
@@ -1334,7 +1338,7 @@ def p_PreDecrementExpression(p):
             'type' : 'INT'
         }
     else:
-        TAC.error("Error: decrement operator can be used with integers only")
+        raise Exception("Error: decrement operator can be used with integers only")
     rules_store.append(p.slice)
 
 def p_UnaryExpressionNotPlusMinus(p):
@@ -1385,19 +1389,19 @@ def p_MultiplicativeExpression(p):
             TAC.emit(newPlace,p[1]['place'], p[3]['place'], p[2])
             p[0]['type'] = 'INT'
         else:
-            TAC.error('Error: Type is not compatible'+p[1]['place']+','+p[3]['place']+'.')
+            raise Exception('Error: Type is not compatible'+p[1]['place']+','+p[3]['place']+'.')
     elif p[2] == '/' :
         if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
             TAC.emit(newPlace, p[1]['place'], p[3]['place'], p[2])
             p[0]['type'] = 'INT'
         else:
-            TAC.error('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
+            raise Exception('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
     elif p[2] == '%':
         if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
             TAC.emit(newPlace,p[1]['place'],p[3]['place'],p[2])
             p[0]['type'] = 'INT'
         else:
-            TAC.error('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
+            raise Exception('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
     rules_store.append(p.slice)
 
 # Checked
@@ -1422,7 +1426,7 @@ def p_AdditiveExpression(p):
         TAC.emit(newPlace, p[1]['place'], p[3]['place'], p[2])
         p[0]['type'] = 'INT'
     else:
-        TAC.error("Error: integer value is needed")
+        raise Exception("Error: integer value is needed")
     rules_store.append(p.slice)
 
 # Checked
@@ -1448,7 +1452,7 @@ def p_ShiftExpression(p):
         TAC.emit(newPlace, p[1]['place'], p[3]['place'], p[2])
         p[0]['type'] = 'INT'
     else:
-        TAC.error("Error: integer value is needed")
+        raise Exception("Error: integer value is needed")
 
     rules_store.append(p.slice)
 
@@ -1514,7 +1518,7 @@ def p_RelationalExpression(p):
             TAC.emit('label', l3, '', '')
             p[0]['type'] = 'INT'
     else:
-        TAC.error('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
+        raise Exception('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
     rules_store.append(p.slice)
 
 # Checked
@@ -1579,7 +1583,7 @@ def p_AndExpression(p):
         TAC.emit(newPlace,p[1]['place'],p[3]['place'],'&')
         p[0]['type'] = 'INT'
     else:
-        TAC.error('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
+        raise Exception('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
     rules_store.append(p.slice)
 
 def p_ExclusiveOrExpression(p):
@@ -1601,7 +1605,7 @@ def p_ExclusiveOrExpression(p):
         TAC.emit(newPlace,p[1]['place'],p[3]['place'],'^')
         p[0]['type'] = 'INT'
     else:
-        TAC.error('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
+        raise Exception('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
     rules_store.append(p.slice)
 
 def p_InclusiveOrExpression(p):
@@ -1623,7 +1627,7 @@ def p_InclusiveOrExpression(p):
         TAC.emit(newPlace, p[1]['place'], p[3]['place'], '|')
         p[0]['type'] = 'INT'
     else:
-        TAC.error('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
+        raise Exception('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
     rules_store.append(p.slice)
 
 def p_ConditionalAndExpression(p):
@@ -1650,7 +1654,7 @@ def p_ConditionalAndExpression(p):
         TAC.emit('label',l1,'','')
         p[0]['type'] = 'INT'
     else:
-        TAC.error('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
+        raise Exception('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
     rules_store.append(p.slice)
 
 def p_ConditionalOrExpression(p):
@@ -1676,7 +1680,7 @@ def p_ConditionalOrExpression(p):
         TAC.emit('label',l1,'','')
         p[0]['type'] = 'INT'
     else:
-        TAC.error('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
+        raise Exception('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
     rules_store.append(p.slice)
 
 def p_ConditionalExpression(p):
@@ -1784,10 +1788,10 @@ def main():
     parser.parse(code, debug=d)
 
     # print("******************")
-    for i in TAC.code_list:
-        print(i)
-    # TAC.generate()
-    ST.print_scope_table()
+    # for i in TAC.code_list:
+        # print(i)
+    TAC.generate()
+    # ST.print_scope_table()
 
 
 if __name__ == "__main__":
