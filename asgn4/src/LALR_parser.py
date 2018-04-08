@@ -330,6 +330,7 @@ def p_VariableDeclarator(p):
     | VariableDeclaratorId ASSIGN VariableInitializer
     '''
     p[0] = {}
+    print(p[1])
     if len(p) == 2:
         p[0]['place'] = p[1]
         return
@@ -581,29 +582,41 @@ def p_LocalVariableDeclaration(p):
     '''
     for symbol in p[2]:
         i = symbol['place']
-        t = symbol['type']
+        if 'type' in symbol:
+            t = symbol['type']
+        else:
+            t = None
         if 'is_array' not in p[1].keys():
+            if t == None:
+                ST.insert_in_sym_table(idName=i, idType=p[1]['type'])
+                return
             if len(i) == 2:
                 raise Exception("Array cannot be assigned to a primitive type")
             if len(t) == 2 and t[1] != 0:
                 raise Exception("Mismatch in function return: %s" %(i))
-            if type(t) == type(tuple([])) and t != p[1]['type']:
+            if type(t) == type(tuple([])) and t[0] != p[1]['type']:
                 raise Exception("Type mismatch: Expected %s, but got %s" %(p[1]['type'], t[0]))
             if type(t) != type(tuple([])) and t != p[1]['type']:
                 raise Exception("Type mismatch: Expected %s, but got %s" %(p[1]['type'], t))
             ST.insert_in_sym_table(idName=i, idType=p[1]['type'])
         else:
             if type(i) != type(' '):
+                if t == None:
+                    ST.insert_in_sym_table(idName=i[0], idType=p[1]['type'], is_array=True, arr_size=i[1])
+                    return
                 if len(i) == 1:
                     raise Exception("Primitive types cannot be assigned to array")
                 if len(i[1]) != int(p[1]['arr_size']):
                     raise Exception("Dimension mismatch for array: %s" %(i[0]))
                 if type(t) != type(tuple([])) and t != p[1]['type']:
                     raise Exception("Type mismatch: Expected %s, but got %s" %(p[1]['type'], t))
-                if type(t) == type(tuple([])) and t != p[1]['type']:
+                if type(t) == type(tuple([])) and t[0] != p[1]['type']:
                     raise Exception("Type mismatch: Expected %s, but got %s" %(p[1]['type'], t[0]))
                 ST.insert_in_sym_table(idName=i[0], idType=p[1]['type'], is_array=True, arr_size=i[1])
             else:
+                if t == None:
+                    ST.insert_in_sym_table(idName=i, idType=p[1]['type'], is_array=True, arr_size=0)
+                    return
                 if type(t) == type(tuple([])) and t[0] != p[1]['type']:
                     raise Exception("%s and %s types are not compatible" %(t[0], p[1]['type']))
                 if 'is_array' not in symbol:
@@ -1331,8 +1344,13 @@ def p_UnaryExpressionNotPlusMinus(p):
     | LOGICAL_NOT UnaryExpression
     | CastExpression
     '''
-    if(len(p)==2):
+    if len(p) == 2:
         p[0] = p[1]
+    else:
+        t = ST.get_temp_var()
+        TAC.emit(t, p[2]['place'], '', p[1])
+        p[0] = p[2]
+        p[0]['place'] = t
     rules_store.append(p.slice)
 
 def p_CastExpression(p):
