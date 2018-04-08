@@ -1,4 +1,4 @@
-class MatrixMultiplicationExample{  
+class matmult{  
     int main(){  
     	//creating two matrices    
     	int [][] a= new int[3][3];
@@ -18,7 +18,7 @@ class MatrixMultiplicationExample{
 			int k = 0;      
     			while(k<3)      
     			{      
-    				c[i][j]= c[i][j] + a[i][k]*b[k][j];      
+    				c[i][j]+=a[i][k]*b[k][j];      
 				k++;
     			}//end of k loop  
     			}//end of j loop  
