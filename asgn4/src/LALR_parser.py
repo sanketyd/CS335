@@ -332,8 +332,9 @@ def p_VariableDeclarator(p):
     VariableDeclarator : VariableDeclaratorId
     | VariableDeclaratorId ASSIGN VariableInitializer
     '''
+    p[0] = {}
     if len(p) == 2:
-        p[0] = p[1]
+        p[0]['place'] = p[1]
         return
     elif type(p[3]) != type({}):
         return
@@ -344,10 +345,23 @@ def p_VariableDeclarator(p):
         for i in p[3]['place']:
             TAC.emit(t, t, i, '*')
         TAC.emit('declare', p[1], t, p[3]['type'])
-        p[0] = (p[1], p[3]['place'])
+        p[0]['place'] = (p[1], p[3]['place'])
+        p[0]['type'] = p[3]['type']
+    elif 'ret_type' in p[3].keys():
+        p[0]['place'] = p[1]
+        p[0]['type'] = p[3]['ret_type']
     else:
         TAC.emit(p[1][0], p[3]['place'], '', p[2])
-        p[0] = p[1]
+        p[0]['place'] = p[1]
+        if 'is_var' not in p[3]:
+            attributes = ST.lookup(p[3]['place'])
+            if 'is_array' in attributes and attributes['is_array']:
+                p[0]['is_array'] = True
+                p[0]['arr_size'] = attributes['arr_size']
+            else:
+                p[0]['is_array'] = False
+
+        p[0]['type'] = p[3]['type']
     rules_store.append(p.slice)
 
 def p_VariableDeclaratorId(p):
@@ -393,7 +407,6 @@ def p_MethodHeader(p):
     '''
     p[0] = {}
     if len(p) == 5:
-        # ST.insert_in_sym_table(p[3]['name'], p[2]['type'], is_func=True, args=p[3]['args'])
         # TODO
         pass
     elif len(p) == 4:
@@ -569,19 +582,41 @@ def p_LocalVariableDeclaration(p):
     '''
     LocalVariableDeclaration : Type VariableDeclarators
     '''
-    for i in p[2]:
+    for symbol in p[2]:
+        i = symbol['place']
+        t = symbol['type']
         if 'is_array' not in p[1].keys():
             if len(i) == 2:
                 raise Exception("Array cannot be assigned to a primitive type")
+            if len(t) == 2 and t[1] != 0:
+                raise Exception("Mismatch in function return: %s" %(i))
+            if type(t) == type(tuple([])) and t != p[1]['type']:
+                raise Exception("Type mismatch: Expected %s, but got %s" %(p[1]['type'], t[0]))
+            if type(t) != type(tuple([])) and t != p[1]['type']:
+                raise Exception("Type mismatch: Expected %s, but got %s" %(p[1]['type'], t))
             ST.insert_in_sym_table(idName=i, idType=p[1]['type'])
         else:
+            # print(p[1])
+            # print(symbol)
             if type(i) != type(' '):
                 if len(i) == 1:
                     raise Exception("Primitive types cannot be assigned to array")
                 if len(i[1]) != int(p[1]['arr_size']):
                     raise Exception("Dimension mismatch for array: %s" %(i[0]))
+                if type(t) != type(tuple([])) and t != p[1]['type']:
+                    raise Exception("Type mismatch: Expected %s, but got %s" %(p[1]['type'], t))
+                if type(t) == type(tuple([])) and t != p[1]['type']:
+                    raise Exception("Type mismatch: Expected %s, but got %s" %(p[1]['type'], t[0]))
                 ST.insert_in_sym_table(idName=i[0], idType=p[1]['type'], is_array=True, arr_size=i[1])
             else:
+                if type(t) == type(tuple([])) and t[0] != p[1]['type']:
+                    raise Exception("%s and %s types are not compatible" %(t[0], p[1]['type']))
+                if 'is_array' not in symbol:
+                    raise Exception("Array assignment was expected: %s" %(i))
+                if 'is_array' in symbol and t != p[1]['type']:
+                    raise Exception("%s and %s types are not compatible" %(t, p[1]['type']))
+                if 'is_array' in symbol and len(symbol['arr_size']) != p[1]['arr_size']:
+                    raise Exception("Array dimensions mismatch: %s" %(i))
                 ST.insert_in_sym_table(idName=i, idType=p[1]['type'], is_array=True, arr_size=0)
     rules_store.append(p.slice)
 
@@ -1146,7 +1181,8 @@ def p_MethodInvocation(p):
                     TAC.emit('param',parameter['place'],'','')
             TAC.emit('call',p[1]['place'],temp_var,'')
             p[0] = {
-                'place' : temp_var
+                'place' : temp_var,
+                'ret_type' : attributes['ret_type']
             }
     rules_store.append(p.slice)
 
