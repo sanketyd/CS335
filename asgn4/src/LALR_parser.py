@@ -1039,6 +1039,8 @@ def p_PrimaryNoNewArray(p):
     '''
     if len(p) == 2:
         p[0] = p[1]
+    else:
+        p[0] = p[2]
     rules_store.append(p.slice)
 
 def p_ClassInstanceCreationExpression(p):
