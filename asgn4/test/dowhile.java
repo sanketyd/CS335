@@ -6,8 +6,7 @@ class Wh {
 	do
         {
         b++;
-
-
+	raktim = raktim - 1;
         }while(raktim > 1);
 
         /* Copy remaining elements of L[] if any */
