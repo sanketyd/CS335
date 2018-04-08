@@ -1039,6 +1039,8 @@ def p_PrimaryNoNewArray(p):
     '''
     if len(p) == 2:
         p[0] = p[1]
+    else:
+        p[0] = p[2]
     rules_store.append(p.slice)
 
 def p_ClassInstanceCreationExpression(p):
@@ -1123,7 +1125,7 @@ def p_MethodInvocation(p):
     # Check return type of function in symbol table
     if p[2] == '(':
         attributes = ST.lookup(p[1]['place'], is_func=True)
-        if attributes == None:
+        if attributes == None and p[1]['place'] != "System.out.println":
             raise Exception("Undeclared function used: %s" %(p[1]['place']))
 
         if p[1]['place'] == 'System.out.println':
