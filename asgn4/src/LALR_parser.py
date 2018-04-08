@@ -1729,7 +1729,7 @@ def main():
     print("******************")
     for i in TAC.code_list:
         print(i)
-    # TAC.generate()
+    TAC.generate()
     # ST.print_scope_table()
 
 
