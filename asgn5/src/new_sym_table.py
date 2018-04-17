@@ -31,12 +31,12 @@ class ScopeTable:
         new_sym_table = SymbolTable(new_label, self.curr_scope)
         self.curr_scope = new_label
         self.scope_and_table_map[self.curr_scope] = new_sym_table
-        TAC.emit('scope', 'begin', self.curr_scope, '')
+        TAC.emit('scope', 'begin', self.curr_scope, '', self)
 
 
     def end_scope(self, TAC):
         # change the name for curr_cope only
-        TAC.emit('scope', 'end', self.curr_scope, '')
+        TAC.emit('scope', 'end', self.curr_scope, '', self)
         self.curr_scope = self.scope_and_table_map[self.curr_scope].parent
 
 
@@ -52,6 +52,16 @@ class ScopeTable:
 
         return None
 
+    def tac_lookup(self, symbol, is_func=False):
+        scope = self.curr_scope
+        while scope != None:
+            if not is_func and symbol in self.scope_and_table_map[scope].symbols:
+                return scope
+            elif is_func and symbol in self.scope_and_table_map[scope].functions:
+                return scope
+            scope = self.scope_and_table_map[scope].parent
+
+        return None
 
     def make_label(self):
         self.label_counter = self.label_counter + 1

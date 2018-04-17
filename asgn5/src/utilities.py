@@ -1,5 +1,6 @@
 import sys
 import csv
+from parser import *
 
 leader_instructions = [
     "ifgoto",
@@ -252,7 +253,7 @@ class Instruction:
                 self.per_inst_next_use[symbol] = SymbolTableEntry()
 
 
-def read_three_address_code(filename,ST):
+def read_three_address_code(filename):
     '''
     Given a csv file `filename`, read the file
     and find the basic blocks. Also store each instruction
