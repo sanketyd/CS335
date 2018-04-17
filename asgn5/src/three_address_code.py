@@ -35,10 +35,15 @@ class TAC:
             elif instruction[0] == 'label':
                 print(str(line_no) + ", label, " + str(instruction[1]))
             elif instruction[0] == 'func':
-                print(str(line_no) + ", label, " + self.prefix + str(instruction[1]))
+                print(str(line_no) + ", func, " + self.prefix + str(instruction[1]))
             elif instruction[0] == 'call':
                 print(str(line_no) + ", call, " + self.prefix + str(instruction[1]) + ", " + str(instruction[2]))
             elif instruction[0] == 'param':
                 print(str(line_no) + ", param, " + str(instruction[1]))
             elif instruction[0] == 'print':
                 print(str(line_no) + ", print, " + str(instruction[1]))
+            elif instruction[0] == 'scope':
+                if instruction[1] == 'begin':
+                    print(str(line_no) + ", begin, " + str(instruction[2]))
+                else:
+                    print(str(line_no) + ", end, " + str(instruction[2]))

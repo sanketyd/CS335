@@ -1,3 +1,12 @@
+class SymbolTableEntry:
+    def __init__(self):
+        # self.value = None
+        self.live = True
+        self.next_use = None
+        self.array_size = None
+        self.address_descriptor_mem = set()
+        self.address_descriptor_reg = set()
+
 class ScopeTable:
     def __init__(self):
         '''
@@ -6,13 +15,14 @@ class ScopeTable:
         self.label_counter = 0
         self.temp_var_counter = 0
         self.curr_scope = 'start'
-        self.label_prefix = 'better_than_javac_l_'
+        self.label_prefix = '_l'
+        # self.label_prefix = 'better_than_javac_l_'
         self.curr_sym_table = SymbolTable(self.curr_scope, parent=None)
         self.scope_and_table_map = dict()
         self.scope_and_table_map[self.curr_scope] = self.curr_sym_table
 
 
-    def create_new_table(self, new_label):
+    def create_new_table(self, new_label, TAC):
         '''
         Creates a new symbol table. If func_name is provided,
         that name is used for scope
@@ -21,10 +31,12 @@ class ScopeTable:
         new_sym_table = SymbolTable(new_label, self.curr_scope)
         self.curr_scope = new_label
         self.scope_and_table_map[self.curr_scope] = new_sym_table
+        TAC.emit('scope', 'begin', self.curr_scope, '')
 
 
-    def end_scope(self):
+    def end_scope(self, TAC):
         # change the name for curr_cope only
+        TAC.emit('scope', 'end', self.curr_scope, '')
         self.curr_scope = self.scope_and_table_map[self.curr_scope].parent
 
 
@@ -49,7 +61,7 @@ class ScopeTable:
         return self.scope_and_table_map[self.curr_scope].parent
 
     def get_temp_var(self):
-        prefix = "t"
+        prefix = "_"
         # prefix = "CS335_GROUP7_var_"
         self.temp_var_counter += 1
         return prefix + str(self.temp_var_counter)
@@ -84,6 +96,9 @@ class SymbolTable:
         self.symbols = dict()
         self.functions = dict()
         self.blocks = set()
+        ###############
+        self.stack_size = 0
+        self.table_offset = 0
 
 
     def add_symbol(self, idName, idType, is_array=False, arr_size=None):
@@ -94,8 +109,12 @@ class SymbolTable:
         self.symbols[idName] = {
             'type' : idType,
             'is_array' : is_array,
-            'arr_size' : arr_size
+            'arr_size' : arr_size,
+            'offset' : self.stack_size,
+            'code_gen' : SymbolTableEntry()
         }
+
+        self.stack_size += 1
 
 
     def add_function(self, func_name, ret_type=None, params=None):

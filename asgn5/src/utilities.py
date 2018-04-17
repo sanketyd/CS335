@@ -8,11 +8,15 @@ leader_instructions = [
     "call",
     "print_int",
     "scan_int",
-    "goto"
+    "goto",
+    "func"
 ]
 
 symbol_table = dict()
 reg_descriptor = dict()
+
+global_offset = 0
+curr_scope = 'start'
 
 reg_descriptor["ebx"] = set()
 reg_descriptor["ecx"] = set()
@@ -71,10 +75,11 @@ class Instruction:
         '''
         if not is_array_dec:
             for symbol in symbols:
-                if is_valid_sym(symbol):
+                if is_valid_sym(symbol) and symbol[0] != "_":
                     if symbol not in symbol_table.keys():
                         symbol_table[symbol] = SymbolTableEntry()
-                        symbol_table[symbol].address_descriptor_mem.add(symbol)
+                        offset = global_offset + ST[curr_scope].symbols[symbol]['offset']
+                        symbol_table[symbol].address_descriptor_mem.add(offset)
         else:
             # an array is declared: arr[100]
             # store 'symbols[0]` in symbol table if not already present
@@ -170,6 +175,19 @@ class Instruction:
             self.instr_type = "label"
             self.label_name = statement[-1].strip()
 
+        elif instr_type == "func":
+            self.instr_type = "func"
+            self.label_name = statement[-1].strip()
+
+        elif instr_type == "begin":
+            self.instr_type = "begin_scope"
+            self.label_name = statement[-1].strip()
+            self.inp1 = ST[curr_scope].stack_size
+
+        elif instr_type == "end":
+            self.instr_type = "end_scope"
+            self.label_name = statement[-1].strip()
+
         elif instr_type == "ret":
             self.instr_type = "return"
             if len(statement) == 3:
@@ -234,7 +252,7 @@ class Instruction:
                 self.per_inst_next_use[symbol] = SymbolTableEntry()
 
 
-def read_three_address_code(filename):
+def read_three_address_code(filename,ST):
     '''
     Given a csv file `filename`, read the file
     and find the basic blocks. Also store each instruction
@@ -246,15 +264,30 @@ def read_three_address_code(filename):
     with open(filename, 'r') as csvfile:
         instruction_set = csv.reader(csvfile, delimiter=',')
         index_label_to_be_added = set()
-        for statement in instruction_set:
+        for i,statement in enumerate(instruction_set):
             if len(statement) == 0:
                 continue
             IR = Instruction(statement)
             IR_code.append(IR)
             line_no = IR.line_no
             instr_type = IR.instr_type
+            if instr_type == "begin_scope":
+                curr_scope = IR.label_name
+                if instruction_set[i+1][1] == "func":
+                    pass
+                else:
+                    ST[IR.label_name].table_offset = global_offset
+                    global_offset += ST[curr_scope].stack_size
+
+            if instr_type == "end_scope":
+                if instruction_set[i - 1][1] == "ret":
+                    pass
+                else:
+                    global_offset -= ST[curr_scope].stack_size
+                curr_scope = IR.label_name
+
             if instr_type in leader_instructions:
-                if instr_type != "label" and instr_type != "print_int" and instr_type != "scan_int":
+                if instr_type != "label" and instr_type != "print_int" and instr_type != "scan_int" and instr_type != "func":
                     line_no += 1
                 leader.add(line_no)
             if instr_type == "ifgoto" or instr_type == "goto":
