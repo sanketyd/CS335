@@ -295,9 +295,10 @@ def p_ClassBody(p):
         p[0]['count'] = 0
         for i in p[2]:
             if(i is not None):
-                p[0][field_count] = i
+                p[0][i[0]] = [field_count] + i[1:]
                 p[0]['count'] += 1
                 field_count += 1
+        field_count = 0
         print(p[0])
     rules_store.append(p.slice)
 
