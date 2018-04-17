@@ -6,6 +6,7 @@ import lexer
 from three_address_code import TAC
 from new_sym_table import ScopeTable
 
+field_count = 0
 TAC = TAC()
 ST = ScopeTable()
 
@@ -253,6 +254,10 @@ def p_Modifiers(p):
     Modifiers : Modifier
     | Modifiers Modifier
     '''
+    if(len(p)==2):
+        p[0] = [p[1]]
+    else:
+        p[0] = p[1] + [p[2]]
     rules_store.append(p.slice)
 
 def p_Modifier(p):
@@ -260,6 +265,7 @@ def p_Modifier(p):
     Modifier : STATIC
     | FINAL
     '''
+    p[0] = p[1]
     rules_store.append(p.slice)
 
 # Section 19.8
@@ -283,35 +289,61 @@ def p_ClassBody(p):
     ClassBody : BLOCK_OPENER BLOCK_CLOSER
     | BLOCK_OPENER ClassBodyDeclarations BLOCK_CLOSER
     '''
+    if(len(p) == 4):
+        global field_count
+        p[0] = dict()
+        p[0]['count'] = 0
+        for i in p[2]:
+            if(i is not None):
+                p[0][field_count] = i
+                p[0]['count'] += 1
+                field_count += 1
+        print(p[0])
     rules_store.append(p.slice)
 
 def p_ClassBodyDeclarations(p):
     '''
-    ClassBodyDeclarations : ClassBodyDeclaration
+    ClassBodyDeclarations : ClassBodyDeclaration 
     | ClassBodyDeclarations ClassBodyDeclaration
     '''
+    if(len(p)==2):
+        p[0] = [p[1]]
+    else:
+        p[0] = p[1] + [p[2]]
     rules_store.append(p.slice)
 
 def p_ClassBodyDeclaration(p):
     '''
-    ClassBodyDeclaration : ClassMemberDeclaration
+    ClassBodyDeclaration : ClassMemberDeclaration FieldMark
     | ConstructorDeclaration
     | StaticInitializer
+    | MethodDeclaration
     '''
+    if(len(p)==3):
+        p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_ClassMemberDeclaration(p):
     '''
     ClassMemberDeclaration : FieldDeclaration
-    | MethodDeclaration
     '''
+    p[0] = p[1]
     rules_store.append(p.slice)
+
+def p_FieldMark(p):
+    '''
+    FieldMark :
+    '''
 
 def p_FieldDeclaration(p):
     '''
-    FieldDeclaration : Modifiers Type VariableDeclarators STMT_TERMINATOR
-    | LocalVariableDeclaration STMT_TERMINATOR
+    FieldDeclaration : Modifiers Type VariableDeclaratorId STMT_TERMINATOR
+    | Type VariableDeclaratorId STMT_TERMINATOR
     '''
+    if(len(p) == 4):
+        p[0] = [p[2],p[1],None]
+    else:    
+        p[0] = [p[3],p[2],p[1]]
     rules_store.append(p.slice)
 
 def p_VariableDeclarators(p):
@@ -1794,8 +1826,8 @@ def main():
     # print("******************")
     # for i in TAC.code_list:
         # print(i)
-    TAC.generate()
-    # ST.print_scope_table()
+    #TAC.generate()
+    #ST.print_scope_table()
 
 
 if __name__ == "__main__":
