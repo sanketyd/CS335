@@ -201,6 +201,8 @@ def p_CompilationUnit(p):
     | TypeDeclarations
     |
     '''
+    for i in p[1]: 
+        print(i)
     rules_store.append(p.slice)
 
 def p_ImportDeclarations(p):
@@ -215,6 +217,10 @@ def p_TypeDeclarations(p):
     TypeDeclarations : TypeDeclaration
     | TypeDeclarations TypeDeclaration
     '''
+    if(len(p)==2):
+        p[0] = [p[1]]
+    else:
+        p[0] = p[1] + [p[2]]
     rules_store.append(p.slice)
 
 def p_PackageDeclaration(p):
@@ -247,6 +253,7 @@ def p_TypeDeclaration(p):
     TypeDeclaration : ClassDeclaration
     | STMT_TERMINATOR
     '''
+    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_Modifiers(p):
@@ -254,6 +261,11 @@ def p_Modifiers(p):
     Modifiers : Modifier
     | Modifiers Modifier
     '''
+    if(len(p)==2):
+        p[0] = [p[1]]
+    else:
+        p[0] = p[1] + [p[2]]
+    
     rules_store.append(p.slice)
 
 def p_Modifier(p):
@@ -261,22 +273,31 @@ def p_Modifier(p):
     Modifier : STATIC
     | FINAL
     '''
+    p[0] = p[1]
+
     rules_store.append(p.slice)
 
 # Section 19.8
 def p_ClassDeclaration(p):
     '''
-    ClassDeclaration : Modifiers CLASS Identifier Inherit ClassBody
-    | Modifiers CLASS Identifier ClassBody
-    | CLASS Identifier Inherit ClassBody
+    ClassDeclaration : CLASS Identifier Inherit ClassBody 
     | CLASS Identifier ClassBody
     '''
+    if(len(p) == 5):
+        p[4]['name'] = p[2]
+        p[4]['parent'] = p[3]['place']
+        p[0] = p[4]
+    else:
+        p[3]['name'] = p[2]
+        p[3]['parent'] = None
+        p[0] = p[3]
     rules_store.append(p.slice)
 
 def p_Inherit(p):
     '''
     Inherit : EXTENDS ClassType
     '''
+    p[0] = p[2]
     rules_store.append(p.slice)
 
 def p_ClassBody(p):
@@ -284,6 +305,17 @@ def p_ClassBody(p):
     ClassBody : BLOCK_OPENER BLOCK_CLOSER
     | BLOCK_OPENER ClassBodyDeclarations BLOCK_CLOSER
     '''
+    if(len(p) == 4):
+        global field_count
+        p[0] = dict()
+        p[0]['count'] = 0
+    for i in p[2]:
+        if(i is not None):
+            p[0][i[0]] = [field_count] + i[1:]
+            p[0]['count'] += 1
+            field_count += 1
+    field_count = 0
+    
     rules_store.append(p.slice)
 
 def p_ClassBodyDeclarations(p):
@@ -291,14 +323,21 @@ def p_ClassBodyDeclarations(p):
     ClassBodyDeclarations : ClassBodyDeclaration
     | ClassBodyDeclarations ClassBodyDeclaration
     '''
+    if(len(p)==2):
+        p[0] = [p[1]]
+    else:
+        p[0] = p[1] + [p[2]]
+
     rules_store.append(p.slice)
 
 def p_ClassBodyDeclaration(p):
     '''
-    ClassBodyDeclaration : ClassMemberDeclaration
+    ClassBodyDeclaration : ClassMemberDeclaration FieldMark
     | ConstructorDeclaration
     | StaticInitializer
     '''
+    if(len(p)==3):
+        p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_ClassMemberDeclaration(p):
@@ -306,13 +345,26 @@ def p_ClassMemberDeclaration(p):
     ClassMemberDeclaration : FieldDeclaration
     | MethodDeclaration
     '''
+    p[0] = p[1]
     rules_store.append(p.slice)
+
+def p_FieldMark(p):
+    '''
+    FieldMark :
+    '''
+    rules_store.append(p.slice)
+
 
 def p_FieldDeclaration(p):
     '''
-    FieldDeclaration : Modifiers Type VariableDeclarators STMT_TERMINATOR
-    | LocalVariableDeclaration STMT_TERMINATOR
+    FieldDeclaration : Modifiers Type VariableDeclaratorId STMT_TERMINATOR
+    | Type VariableDeclaratorId STMT_TERMINATOR
     '''
+    if(len(p) == 4):
+        p[0] = [p[2],p[1],None]
+    else:    
+        p[0] = [p[3],p[2],p[1]]
+
     rules_store.append(p.slice)
 
 def p_VariableDeclarators(p):
@@ -600,7 +652,7 @@ def p_LocalVariableDeclaration(p):
         if 'is_array' not in p[1].keys():
             if t == None:
                 ST.insert_in_sym_table(idName=i, idType=p[1]['type'])
-                continue
+                return
             if len(i) == 2:
                 raise Exception("Array cannot be assigned to a primitive type")
             if len(t) == 2 and t[1] != 0:
@@ -614,7 +666,7 @@ def p_LocalVariableDeclaration(p):
             if type(i) != type(' '):
                 if t == None:
                     ST.insert_in_sym_table(idName=i[0], idType=p[1]['type'], is_array=True, arr_size=i[1])
-                    continue
+                    return
                 if len(i) == 1:
                     raise Exception("Primitive types cannot be assigned to array")
                 if len(i[1]) != int(p[1]['arr_size']):
@@ -627,7 +679,7 @@ def p_LocalVariableDeclaration(p):
             else:
                 if t == None:
                     ST.insert_in_sym_table(idName=i, idType=p[1]['type'], is_array=True, arr_size=0)
-                    continue
+                    return
                 if type(t) == type(tuple([])) and t[0] != p[1]['type']:
                     raise Exception("%s and %s types are not compatible" %(t[0], p[1]['type']))
                 if 'is_array' not in symbol:
@@ -639,8 +691,8 @@ def p_LocalVariableDeclaration(p):
                 ST.insert_in_sym_table(idName=i, idType=p[1]['type'], is_array=True, arr_size=0)
     for symbol in p[2]:
         if "emit_intrs" in symbol.keys():
-            for X in symbol["emit_intrs"]:
-                TAC.emit(X[0], X[1], X[2], X[3], ST)
+            X = symbol["emit_intrs"][0]
+            TAC.emit(X[0], X[1], X[2], X[3], ST)
     rules_store.append(p.slice)
 
 def p_Statement(p):
@@ -1042,7 +1094,7 @@ def p_ReturnStatement(p):
         if curr_returned != None:
             if to_return[0] != curr_returned['type']:
                 raise Exception("Wrong return type in %s" %(ST.curr_scope))
-            if 'is_array' in curr_returned.keys() and curr_returned['is_array'] and len(curr_returned['arr_size']) != to_return[1]:
+            if 'is_array' in curr_returned.keys() and len(curr_returned['arr_size']) != to_return[1]:
                 raise Exception("Dimension mismatch in return statement in %s" %(ST.curr_scope))
         elif curr_returned == None:
             if p[2]['type'] != to_return[0] or to_return[1] != 0:
@@ -1209,7 +1261,7 @@ def p_MethodInvocation(p):
                     if parameter['type'] != proto['type']:
                         raise Exception("Wrong type of arg passed to function %s; got %s but expected %s" %(p[1]['place'], parameter['type'], proto['type']))
                     TAC.emit('param',parameter['place'],'','', ST)
-            TAC.emit('call',p[1]['place'],temp_var,len(p[3]), ST)
+            TAC.emit('call',p[1]['place'],temp_var,'', ST)
             p[0] = {
                 'place' : temp_var,
                 'ret_type' : attributes['ret_type']
