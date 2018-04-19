@@ -15,7 +15,7 @@ stackend = []
 rules_store = []
 
 global_return_type = None
-field_count = 0
+
 # Section 19.2
 def p_Goal(p):
     '''Goal : CompilationUnit'''
@@ -200,8 +200,6 @@ def p_CompilationUnit(p):
     | TypeDeclarations
     |
     '''
-    for i in p[1]: 
-        print(i)
     rules_store.append(p.slice)
 
 def p_ImportDeclarations(p):
@@ -216,10 +214,6 @@ def p_TypeDeclarations(p):
     TypeDeclarations : TypeDeclaration
     | TypeDeclarations TypeDeclaration
     '''
-    if(len(p)==2):
-        p[0] = [p[1]]
-    else:
-        p[0] = p[1] + [p[2]]
     rules_store.append(p.slice)
 
 def p_PackageDeclaration(p):
@@ -252,7 +246,6 @@ def p_TypeDeclaration(p):
     TypeDeclaration : ClassDeclaration
     | STMT_TERMINATOR
     '''
-    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_Modifiers(p):
@@ -260,11 +253,6 @@ def p_Modifiers(p):
     Modifiers : Modifier
     | Modifiers Modifier
     '''
-    if(len(p)==2):
-        p[0] = [p[1]]
-    else:
-        p[0] = p[1] + [p[2]]
-    
     rules_store.append(p.slice)
 
 def p_Modifier(p):
@@ -272,31 +260,22 @@ def p_Modifier(p):
     Modifier : STATIC
     | FINAL
     '''
-    p[0] = p[1]
-
     rules_store.append(p.slice)
 
 # Section 19.8
 def p_ClassDeclaration(p):
     '''
-    ClassDeclaration : CLASS Identifier Inherit ClassBody 
+    ClassDeclaration : Modifiers CLASS Identifier Inherit ClassBody
+    | Modifiers CLASS Identifier ClassBody
+    | CLASS Identifier Inherit ClassBody
     | CLASS Identifier ClassBody
     '''
-    if(len(p) == 5):
-        p[4]['name'] = p[2]
-        p[4]['parent'] = p[3]['place']
-        p[0] = p[4]
-    else:
-        p[3]['name'] = p[2]
-        p[3]['parent'] = None
-        p[0] = p[3]
     rules_store.append(p.slice)
 
 def p_Inherit(p):
     '''
     Inherit : EXTENDS ClassType
     '''
-    p[0] = p[2]
     rules_store.append(p.slice)
 
 def p_ClassBody(p):
@@ -304,17 +283,6 @@ def p_ClassBody(p):
     ClassBody : BLOCK_OPENER BLOCK_CLOSER
     | BLOCK_OPENER ClassBodyDeclarations BLOCK_CLOSER
     '''
-    if(len(p) == 4):
-        global field_count
-        p[0] = dict()
-        p[0]['count'] = 0
-    for i in p[2]:
-        if(i is not None):
-            p[0][i[0]] = [field_count] + i[1:]
-            p[0]['count'] += 1
-            field_count += 1
-    field_count = 0
-    
     rules_store.append(p.slice)
 
 def p_ClassBodyDeclarations(p):
@@ -322,21 +290,14 @@ def p_ClassBodyDeclarations(p):
     ClassBodyDeclarations : ClassBodyDeclaration
     | ClassBodyDeclarations ClassBodyDeclaration
     '''
-    if(len(p)==2):
-        p[0] = [p[1]]
-    else:
-        p[0] = p[1] + [p[2]]
-
     rules_store.append(p.slice)
 
 def p_ClassBodyDeclaration(p):
     '''
-    ClassBodyDeclaration : ClassMemberDeclaration FieldMark
+    ClassBodyDeclaration : ClassMemberDeclaration
     | ConstructorDeclaration
     | StaticInitializer
     '''
-    if(len(p)==3):
-        p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_ClassMemberDeclaration(p):
@@ -344,26 +305,13 @@ def p_ClassMemberDeclaration(p):
     ClassMemberDeclaration : FieldDeclaration
     | MethodDeclaration
     '''
-    p[0] = p[1]
     rules_store.append(p.slice)
-
-def p_FieldMark(p):
-    '''
-    FieldMark :
-    '''
-    rules_store.append(p.slice)
-
 
 def p_FieldDeclaration(p):
     '''
-    FieldDeclaration : Modifiers Type VariableDeclaratorId STMT_TERMINATOR
-    | Type VariableDeclaratorId STMT_TERMINATOR
+    FieldDeclaration : Modifiers Type VariableDeclarators STMT_TERMINATOR
+    | LocalVariableDeclaration STMT_TERMINATOR
     '''
-    if(len(p) == 4):
-        p[0] = [p[2],p[1],None]
-    else:    
-        p[0] = [p[3],p[2],p[1]]
-
     rules_store.append(p.slice)
 
 def p_VariableDeclarators(p):
@@ -690,8 +638,8 @@ def p_LocalVariableDeclaration(p):
                 ST.insert_in_sym_table(idName=i, idType=p[1]['type'], is_array=True, arr_size=0)
     for symbol in p[2]:
         if "emit_intrs" in symbol.keys():
-            X = symbol["emit_intrs"][0]
-            TAC.emit(X[0], X[1], X[2], X[3], ST)
+            for X in symbol["emit_intrs"]:
+                TAC.emit(X[0], X[1], X[2], X[3], ST)
     rules_store.append(p.slice)
 
 def p_Statement(p):
@@ -1260,7 +1208,7 @@ def p_MethodInvocation(p):
                     if parameter['type'] != proto['type']:
                         raise Exception("Wrong type of arg passed to function %s; got %s but expected %s" %(p[1]['place'], parameter['type'], proto['type']))
                     TAC.emit('param',parameter['place'],'','', ST)
-            TAC.emit('call',p[1]['place'],temp_var,'', ST)
+            TAC.emit('call',p[1]['place'],temp_var,len(p[3]), ST)
             p[0] = {
                 'place' : temp_var,
                 'ret_type' : attributes['ret_type']
@@ -1444,30 +1392,14 @@ def p_MultiplicativeExpression(p):
     if(len(p)==2):
         p[0] = p[1]
         return
-    print(p[1])
-    print(p[3])
     newPlace = ST.get_temp_var()
     p[0] = {
         'place' : newPlace,
         'type' : 'TYPE_ERROR'
     }
-    # -----------------------------------------------------
-    if 'ret_type' in p[1].keys():
-        type1 = p[1]['ret_type'][0]
-        if p[1]['ret_type'][1] != 0:
-            raise Exception("Trying wrong operation")
-    else:
-        type1 = p[1]['type']
-
-    if 'ret_type' in p[3].keys():
-        type3 = p[3]['ret_type'][0]
-        if p[3]['ret_type'][1] != 0:
-            raise Exception("Trying wrong operation")
-    else:
-        type3 = p[3]['type']
-    # -----------------------------------------------------
-
-    # TODO: change typechecking
+    #SANKET:- Same here with function declaration
+    if ('type' in p[1].keys() and p[1]['type'] == 'TYPE_ERROR') or ('type' in p[3].keys() and p[3]['type'] == 'TYPE_ERROR'):
+        return
     if p[2] == '*':
         if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
             TAC.emit(newPlace,p[1]['place'], p[3]['place'], p[2], ST)
@@ -1876,7 +1808,7 @@ def parser_main():
     # print("******************")
     # for i in TAC.code_list:
         # print(i)
-    #TAC.generate()
+    TAC.generate()
     # ST.print_scope_table()
 
 if __name__ == "__main__":

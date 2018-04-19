@@ -1,4 +1,9 @@
 class Debug {
+    static int k;
+    final int l;
+    int m;
+    Debug(){
+    }
     int add(int a, int b) {
         return a + b;
     }
