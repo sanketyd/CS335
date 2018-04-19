@@ -6,7 +6,6 @@ import lexer
 from three_address_code import TAC
 from new_sym_table import ScopeTable
 
-field_count = 0
 TAC = TAC()
 ST = ScopeTable()
 
@@ -16,7 +15,7 @@ stackend = []
 rules_store = []
 
 global_return_type = None
-
+field_count = 0
 # Section 19.2
 def p_Goal(p):
     '''Goal : CompilationUnit'''
@@ -201,6 +200,8 @@ def p_CompilationUnit(p):
     | TypeDeclarations
     |
     '''
+    for i in p[1]: 
+        print(i)
     rules_store.append(p.slice)
 
 def p_ImportDeclarations(p):
@@ -215,6 +216,10 @@ def p_TypeDeclarations(p):
     TypeDeclarations : TypeDeclaration
     | TypeDeclarations TypeDeclaration
     '''
+    if(len(p)==2):
+        p[0] = [p[1]]
+    else:
+        p[0] = p[1] + [p[2]]
     rules_store.append(p.slice)
 
 def p_PackageDeclaration(p):
@@ -247,6 +252,7 @@ def p_TypeDeclaration(p):
     TypeDeclaration : ClassDeclaration
     | STMT_TERMINATOR
     '''
+    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_Modifiers(p):
@@ -258,6 +264,7 @@ def p_Modifiers(p):
         p[0] = [p[1]]
     else:
         p[0] = p[1] + [p[2]]
+    
     rules_store.append(p.slice)
 
 def p_Modifier(p):
@@ -266,22 +273,30 @@ def p_Modifier(p):
     | FINAL
     '''
     p[0] = p[1]
+
     rules_store.append(p.slice)
 
 # Section 19.8
 def p_ClassDeclaration(p):
     '''
-    ClassDeclaration : Modifiers CLASS Identifier Inherit ClassBody
-    | Modifiers CLASS Identifier ClassBody
-    | CLASS Identifier Inherit ClassBody
+    ClassDeclaration : CLASS Identifier Inherit ClassBody 
     | CLASS Identifier ClassBody
     '''
+    if(len(p) == 5):
+        p[4]['name'] = p[2]
+        p[4]['parent'] = p[3]['place']
+        p[0] = p[4]
+    else:
+        p[3]['name'] = p[2]
+        p[3]['parent'] = None
+        p[0] = p[3]
     rules_store.append(p.slice)
 
 def p_Inherit(p):
     '''
     Inherit : EXTENDS ClassType
     '''
+    p[0] = p[2]
     rules_store.append(p.slice)
 
 def p_ClassBody(p):
@@ -293,24 +308,25 @@ def p_ClassBody(p):
         global field_count
         p[0] = dict()
         p[0]['count'] = 0
-        for i in p[2]:
-            if(i is not None):
-                p[0][i[0]] = [field_count] + i[1:]
-                p[0]['count'] += 1
-                field_count += 1
-        field_count = 0
-        print(p[0])
+    for i in p[2]:
+        if(i is not None):
+            p[0][i[0]] = [field_count] + i[1:]
+            p[0]['count'] += 1
+            field_count += 1
+    field_count = 0
+    
     rules_store.append(p.slice)
 
 def p_ClassBodyDeclarations(p):
     '''
-    ClassBodyDeclarations : ClassBodyDeclaration 
+    ClassBodyDeclarations : ClassBodyDeclaration
     | ClassBodyDeclarations ClassBodyDeclaration
     '''
     if(len(p)==2):
         p[0] = [p[1]]
     else:
         p[0] = p[1] + [p[2]]
+
     rules_store.append(p.slice)
 
 def p_ClassBodyDeclaration(p):
@@ -318,7 +334,6 @@ def p_ClassBodyDeclaration(p):
     ClassBodyDeclaration : ClassMemberDeclaration FieldMark
     | ConstructorDeclaration
     | StaticInitializer
-    | MethodDeclaration
     '''
     if(len(p)==3):
         p[0] = p[1]
@@ -327,6 +342,7 @@ def p_ClassBodyDeclaration(p):
 def p_ClassMemberDeclaration(p):
     '''
     ClassMemberDeclaration : FieldDeclaration
+    | MethodDeclaration
     '''
     p[0] = p[1]
     rules_store.append(p.slice)
@@ -335,6 +351,8 @@ def p_FieldMark(p):
     '''
     FieldMark :
     '''
+    rules_store.append(p.slice)
+
 
 def p_FieldDeclaration(p):
     '''
@@ -345,6 +363,7 @@ def p_FieldDeclaration(p):
         p[0] = [p[2],p[1],None]
     else:    
         p[0] = [p[3],p[2],p[1]]
+
     rules_store.append(p.slice)
 
 def p_VariableDeclarators(p):
@@ -365,6 +384,7 @@ def p_VariableDeclarator(p):
     | VariableDeclaratorId ASSIGN VariableInitializer
     '''
     p[0] = {}
+    to_emit = []
     if len(p) == 2:
         p[0]['place'] = p[1]
         return
@@ -373,17 +393,20 @@ def p_VariableDeclarator(p):
 
     if 'is_array' in p[3].keys() and p[3]['is_array']:
         t = ST.get_temp_var()
-        TAC.emit(t, '1', '', '=', ST)
+        to_emit.append([t, '1', '', '=', ST])
         for i in p[3]['place']:
-            TAC.emit(t, t, i, '*', ST)
-        TAC.emit('declare', p[1], t, p[3]['type'], ST)
+            to_emit.append([t, t, i, '*', ST])
+        to_emit.append(['declare', p[1], t, p[3]['type'], ST])
         p[0]['place'] = (p[1], p[3]['place'])
         p[0]['type'] = p[3]['type']
+        p[0]['emit_intrs'] = to_emit
+
     elif 'ret_type' in p[3].keys():
         p[0]['place'] = p[1]
         p[0]['type'] = p[3]['ret_type']
+
     else:
-        TAC.emit(p[1][0], p[3]['place'], '', p[2], ST)
+        to_emit.append([p[1], p[3]['place'], '', p[2], ST])
         p[0]['place'] = p[1]
         if 'is_var' not in p[3]:
             attributes = ST.lookup(p[3]['place'])
@@ -394,6 +417,7 @@ def p_VariableDeclarator(p):
                 p[0]['is_array'] = False
 
         p[0]['type'] = p[3]['type']
+        p[0]['emit_intrs'] = to_emit
     rules_store.append(p.slice)
 
 def p_VariableDeclaratorId(p):
@@ -477,6 +501,8 @@ def p_MethodDeclarator(p):
         for parameter in p[4]:
             ST.insert_in_sym_table(parameter['place'],parameter['type'])
     TAC.emit('func', p[1], '', '', ST)
+    for arg in p[0]['args']:
+        TAC.emit('arg', arg['place'], '', '', ST)
     rules_store.append(p.slice)
 
 def p_MehodDeclMark1(p):
@@ -625,7 +651,7 @@ def p_LocalVariableDeclaration(p):
         if 'is_array' not in p[1].keys():
             if t == None:
                 ST.insert_in_sym_table(idName=i, idType=p[1]['type'])
-                return
+                continue
             if len(i) == 2:
                 raise Exception("Array cannot be assigned to a primitive type")
             if len(t) == 2 and t[1] != 0:
@@ -639,7 +665,7 @@ def p_LocalVariableDeclaration(p):
             if type(i) != type(' '):
                 if t == None:
                     ST.insert_in_sym_table(idName=i[0], idType=p[1]['type'], is_array=True, arr_size=i[1])
-                    return
+                    continue
                 if len(i) == 1:
                     raise Exception("Primitive types cannot be assigned to array")
                 if len(i[1]) != int(p[1]['arr_size']):
@@ -652,7 +678,7 @@ def p_LocalVariableDeclaration(p):
             else:
                 if t == None:
                     ST.insert_in_sym_table(idName=i, idType=p[1]['type'], is_array=True, arr_size=0)
-                    return
+                    continue
                 if type(t) == type(tuple([])) and t[0] != p[1]['type']:
                     raise Exception("%s and %s types are not compatible" %(t[0], p[1]['type']))
                 if 'is_array' not in symbol:
@@ -662,6 +688,10 @@ def p_LocalVariableDeclaration(p):
                 if 'is_array' in symbol and len(symbol['arr_size']) != p[1]['arr_size']:
                     raise Exception("Array dimensions mismatch: %s" %(i))
                 ST.insert_in_sym_table(idName=i, idType=p[1]['type'], is_array=True, arr_size=0)
+    for symbol in p[2]:
+        if "emit_intrs" in symbol.keys():
+            X = symbol["emit_intrs"][0]
+            TAC.emit(X[0], X[1], X[2], X[3], ST)
     rules_store.append(p.slice)
 
 def p_Statement(p):
@@ -1414,13 +1444,30 @@ def p_MultiplicativeExpression(p):
     if(len(p)==2):
         p[0] = p[1]
         return
+    print(p[1])
+    print(p[3])
     newPlace = ST.get_temp_var()
     p[0] = {
         'place' : newPlace,
         'type' : 'TYPE_ERROR'
     }
-    if p[1]['type'] == 'TYPE_ERROR' or p[3]['type'] == 'TYPE_ERROR':
-        return
+    # -----------------------------------------------------
+    if 'ret_type' in p[1].keys():
+        type1 = p[1]['ret_type'][0]
+        if p[1]['ret_type'][1] != 0:
+            raise Exception("Trying wrong operation")
+    else:
+        type1 = p[1]['type']
+
+    if 'ret_type' in p[3].keys():
+        type3 = p[3]['ret_type'][0]
+        if p[3]['ret_type'][1] != 0:
+            raise Exception("Trying wrong operation")
+    else:
+        type3 = p[3]['type']
+    # -----------------------------------------------------
+
+    # TODO: change typechecking
     if p[2] == '*':
         if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
             TAC.emit(newPlace,p[1]['place'], p[3]['place'], p[2], ST)
@@ -1749,7 +1796,9 @@ def p_Assignment(p):
             raise Exception("Undeclared variable used: %s" %(p[1]['place']))
         if 'is_array' in attributes and attributes['is_array']:
             raise Exception("Array '%s' not indexed properly" %(p[1]['place']))
-        if attributes['type'] == p[3]['type']:
+        if 'ret_type' in p[3].keys() and p[3]['ret_type'][0] == attributes['type']:
+            TAC.emit(p[1]['place'], p[3]['place'], '', p[2], ST)
+        elif attributes['type'] == p[3]['type']:
             TAC.emit(p[1]['place'], p[3]['place'], '', p[2], ST)
         else:
             raise Exception("Type Mismatch for symbol: %s" %(p[3]['place']))
@@ -1810,7 +1859,7 @@ def p_error(p):
     print("Syntax Error in line %d" %(p.lineno))
 
 
-def main():
+def parser_main():
     tokens = lexer.tokens
     parser = yacc.yacc()
     inputfile = sys.argv[1]
@@ -1828,8 +1877,7 @@ def main():
     # for i in TAC.code_list:
         # print(i)
     #TAC.generate()
-    #ST.print_scope_table()
-
+    # ST.print_scope_table()
 
 if __name__ == "__main__":
-    main()
+    parser_main()
