@@ -1812,9 +1812,6 @@ def p_Assignment(p):
     Assignment : LeftHandSide AssignmentOperator AssignmentExpression
     '''
     if 'access_type' not in p[1].keys():
-        if(len(p[1]['place'].split(".")) > 1):
-                print(p[1])
-                return
         attributes = ST.lookup(p[1]['place'])
         if attributes == None:
             raise Exception("Undeclared variable used: %s" %(p[1]['place']))

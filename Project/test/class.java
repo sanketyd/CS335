@@ -14,6 +14,5 @@ class Debug {
     }
     int main() {
         papa x = new papa();
-	x.p = 10;
     }
 }
