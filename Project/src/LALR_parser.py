@@ -17,6 +17,7 @@ rules_store = []
 global_return_type = None
 field_count = 0
 
+class_list = []
 # Section 19.2
 def p_Goal(p):
     '''Goal : CompilationUnit'''
@@ -201,6 +202,8 @@ def p_CompilationUnit(p):
     | TypeDeclarations
     |
     '''
+    global class_list
+    class_list = p[1]
     for i in p[1]: 
         print(i)
     rules_store.append(p.slice)
@@ -217,6 +220,7 @@ def p_TypeDeclarations(p):
     TypeDeclarations : TypeDeclaration
     | TypeDeclarations TypeDeclaration
     '''
+    global class_list
     if(len(p)==2):
         p[0] = [p[1]]
     else:
@@ -346,6 +350,7 @@ def p_ClassMemberDeclaration(p):
     | MethodDeclaration
     '''
     p[0] = p[1]
+    #print(p[0])
     rules_store.append(p.slice)
 
 def p_FieldMark(p):
@@ -443,7 +448,7 @@ def p_MethodDeclaration(p):
     TAC.emit('ret','','','', ST)
     ST.end_scope(TAC)
     rules_store.append(p.slice)
-
+    p[0] = ['method', p[1]]
 def p_MehodDeclMark2(p):
     '''
     MethodDeclMark2 :
@@ -1861,7 +1866,7 @@ def parser_main():
     # print("******************")
     # for i in TAC.code_list:
         # print(i)
-    TAC.generate()
+    #TAC.generate()
     # ST.print_scope_table()
 
 if __name__ == "__main__":
