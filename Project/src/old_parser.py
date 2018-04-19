@@ -16,7 +16,6 @@ rules_store = []
 
 global_return_type = None
 field_count = 0
-
 # Section 19.2
 def p_Goal(p):
     '''Goal : CompilationUnit'''
@@ -652,7 +651,7 @@ def p_LocalVariableDeclaration(p):
         if 'is_array' not in p[1].keys():
             if t == None:
                 ST.insert_in_sym_table(idName=i, idType=p[1]['type'])
-                continue
+                return
             if len(i) == 2:
                 raise Exception("Array cannot be assigned to a primitive type")
             if len(t) == 2 and t[1] != 0:
@@ -666,7 +665,7 @@ def p_LocalVariableDeclaration(p):
             if type(i) != type(' '):
                 if t == None:
                     ST.insert_in_sym_table(idName=i[0], idType=p[1]['type'], is_array=True, arr_size=i[1])
-                    continue
+                    return
                 if len(i) == 1:
                     raise Exception("Primitive types cannot be assigned to array")
                 if len(i[1]) != int(p[1]['arr_size']):
@@ -679,7 +678,7 @@ def p_LocalVariableDeclaration(p):
             else:
                 if t == None:
                     ST.insert_in_sym_table(idName=i, idType=p[1]['type'], is_array=True, arr_size=0)
-                    continue
+                    return
                 if type(t) == type(tuple([])) and t[0] != p[1]['type']:
                     raise Exception("%s and %s types are not compatible" %(t[0], p[1]['type']))
                 if 'is_array' not in symbol:
@@ -691,8 +690,8 @@ def p_LocalVariableDeclaration(p):
                 ST.insert_in_sym_table(idName=i, idType=p[1]['type'], is_array=True, arr_size=0)
     for symbol in p[2]:
         if "emit_intrs" in symbol.keys():
-            for X in symbol["emit_intrs"]:
-                TAC.emit(X[0], X[1], X[2], X[3], ST)
+            X = symbol["emit_intrs"][0]
+            TAC.emit(X[0], X[1], X[2], X[3], ST)
     rules_store.append(p.slice)
 
 def p_Statement(p):
@@ -1094,7 +1093,7 @@ def p_ReturnStatement(p):
         if curr_returned != None:
             if to_return[0] != curr_returned['type']:
                 raise Exception("Wrong return type in %s" %(ST.curr_scope))
-            if 'is_array' in curr_returned.keys() and curr_returned['is_array'] and len(curr_returned['arr_size']) != to_return[1]:
+            if 'is_array' in curr_returned.keys() and len(curr_returned['arr_size']) != to_return[1]:
                 raise Exception("Dimension mismatch in return statement in %s" %(ST.curr_scope))
         elif curr_returned == None:
             if p[2]['type'] != to_return[0] or to_return[1] != 0:
@@ -1261,7 +1260,7 @@ def p_MethodInvocation(p):
                     if parameter['type'] != proto['type']:
                         raise Exception("Wrong type of arg passed to function %s; got %s but expected %s" %(p[1]['place'], parameter['type'], proto['type']))
                     TAC.emit('param',parameter['place'],'','', ST)
-            TAC.emit('call',p[1]['place'],temp_var,len(p[3]), ST)
+            TAC.emit('call',p[1]['place'],temp_var,'', ST)
             p[0] = {
                 'place' : temp_var,
                 'ret_type' : attributes['ret_type']
@@ -1861,7 +1860,7 @@ def parser_main():
     # print("******************")
     # for i in TAC.code_list:
         # print(i)
-    TAC.generate()
+    #TAC.generate()
     # ST.print_scope_table()
 
 if __name__ == "__main__":
