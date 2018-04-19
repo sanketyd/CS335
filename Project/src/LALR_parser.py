@@ -264,7 +264,6 @@ def p_Modifiers(p):
         p[0] = [p[1]]
     else:
         p[0] = p[1] + [p[2]]
-    
     rules_store.append(p.slice)
 
 def p_Modifier(p):
@@ -279,7 +278,7 @@ def p_Modifier(p):
 # Section 19.8
 def p_ClassDeclaration(p):
     '''
-    ClassDeclaration : CLASS Identifier Inherit ClassBody 
+    ClassDeclaration : CLASS Identifier Inherit ClassBody
     | CLASS Identifier ClassBody
     '''
     if(len(p) == 5):
@@ -315,7 +314,6 @@ def p_ClassBody(p):
             p[0]['count'] += 1
             field_count += 1
     field_count = 0
-    
     rules_store.append(p.slice)
 
 def p_ClassBodyDeclarations(p):
@@ -411,6 +409,10 @@ def p_VariableDeclarator(p):
         p[0]['place'] = p[1]
         if 'is_var' not in p[3]:
             attributes = ST.lookup(p[3]['place'])
+            if attributes == None:
+                p[0]['type'] = p[3]['type']
+                p[0]['emit_intrs'] = to_emit
+                return
             if 'is_array' in attributes and attributes['is_array']:
                 p[0]['is_array'] = True
                 p[0]['arr_size'] = attributes['arr_size']
@@ -643,10 +645,7 @@ def p_LocalVariableDeclaration(p):
     '''
     LocalVariableDeclaration : Type VariableDeclarators
     '''
-    print("-----")
-    print(p[1])
     for symbol in p[2]:
-        print(symbol)
         i = symbol['place']
         if 'type' in symbol:
             t = symbol['type']
@@ -1378,8 +1377,11 @@ def p_UnaryExpression(p):
     | UnaryExpressionNotPlusMinus
     '''
     if len(p) == 2:
+        print(p[1])
         p[0] = p[1]
         return
+    else:
+        pass
     rules_store.append(p.slice)
 
 # Checked
