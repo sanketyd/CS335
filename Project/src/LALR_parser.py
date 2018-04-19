@@ -5,10 +5,11 @@ import ply.yacc as yacc
 import lexer
 from three_address_code import TAC
 from new_sym_table import ScopeTable
+import global_vars as g
 
 TAC = TAC()
 ST = ScopeTable()
-
+class_table = dict()
 stackbegin = []
 stackend = []
 
@@ -216,10 +217,14 @@ def p_TypeDeclarations(p):
     TypeDeclarations : TypeDeclaration
     | TypeDeclarations TypeDeclaration
     '''
+    global class_table
     if(len(p)==2):
+        class_table[p[1]['name']] = p[1]
         p[0] = [p[1]]
     else:
+        class_table[p[2]['name']] = p[2]
         p[0] = p[1] + [p[2]]
+    g.class_counter += 1
     rules_store.append(p.slice)
 
 def p_PackageDeclaration(p):
@@ -308,12 +313,14 @@ def p_ClassBody(p):
     if(len(p) == 4):
         global field_count
         p[0] = dict()
-        p[0]['count'] = 0
-    for i in p[2]:
-        if(i is not None):
-            p[0][i[0]] = [field_count] + i[1:]
-            p[0]['count'] += 1
-            field_count += 1
+        p[0]['fields'] = [i for i in p[2] if i is not None]
+        p[0]['count'] = len(p[0]['fields'])
+        
+    #for i in p[2]:
+    #    if(i is not None):
+    #        p[0][]['fields'] = [field_count] + i[1]
+    #        p[0]['count'] += 1
+    #        field_count += 1
     field_count = 0
     
     rules_store.append(p.slice)
@@ -390,6 +397,18 @@ def p_VariableDeclarator(p):
         p[0]['place'] = p[1]
         return
     elif type(p[3]) != type({}):
+        return
+    
+    if 'fields' in p[3].keys():
+        obj_name = p[1] + "_" + p[3]['name']
+        size = p[3]['count']
+        # to_emit.append(['declare', obj_name, '', '', ST])
+        for field in p[3]['fields']:
+            dest = field[0] + "_" + p[3]['name']
+            to_emit.append([dest, '0', '', '=', ST])
+        p[0]['class_name'] = p[3]['name']
+        p[0]['place'] = p[1]
+        p[0]['emit_intrs'] = to_emit
         return
 
     if 'is_array' in p[3].keys() and p[3]['is_array']:
@@ -566,6 +585,8 @@ def p_ConstructorDeclaration(p):
     | ConstructorDeclarator Throws ConstructorBody
     | ConstructorDeclarator ConstructorBody
     '''
+    if(len(p) == 3):
+        pass
     rules_store.append(p.slice)
 
 def p_ConstructorDeclarator(p):
@@ -578,11 +599,11 @@ def p_ConstructorDeclarator(p):
 def p_ConstructorBody(p):
     '''
     ConstructorBody : BLOCK_OPENER ExplicitConstructorInvocation BlockStatements BLOCK_CLOSER
-    | BLOCK_OPENER ExplicitConstructorInvocation BLOCK_CLOSER
     | BLOCK_OPENER BlockStatements BLOCK_CLOSER
     | BLOCK_OPENER BLOCK_CLOSER
     '''
     rules_store.append(p.slice)
+    #| BLOCK_OPENER ExplicitConstructorInvocation BLOCK_CLOSER
 
 def p_ExplicitConstructorInvocation(p):
     '''
@@ -643,10 +664,11 @@ def p_LocalVariableDeclaration(p):
     '''
     LocalVariableDeclaration : Type VariableDeclarators
     '''
-    print("-----")
-    print(p[1])
     for symbol in p[2]:
-        print(symbol)
+        if 'class_name' in symbol.keys():
+            if p[1]['place'] != symbol['class_name']:
+                raise Exception("Wrong class assignments")
+            continue
         i = symbol['place']
         if 'type' in symbol:
             t = symbol['type']
@@ -1163,14 +1185,20 @@ def p_PrimaryNoNewArray(p):
         p[0] = p[2]
     rules_store.append(p.slice)
 
+def p_NEWMark(p):
+    '''
+    NEWMark :
+    '''
 def p_ClassInstanceCreationExpression(p):
     '''
     ClassInstanceCreationExpression : NEW ClassType L_PAREN R_PAREN
     | NEW ClassType L_PAREN ArgumentList R_PAREN
     '''
-    p[0] = p[2]
+    attributes = class_table[p[2]['place']]
+    p[0] = attributes
+    #TAC.emit("declare","_"+"obj_","","",ST)
     rules_store.append(p.slice)
-
+    
 def p_ArgumentList(p):
     '''
     ArgumentList : Expression
@@ -1232,6 +1260,7 @@ def p_FieldAccess(p):
     FieldAccess : Primary DOT Identifier
     | SUPER DOT Identifier
     '''
+    P[0] = P[3]
     rules_store.append(p.slice)
 
 def p_MethodInvocation(p):
@@ -1315,6 +1344,9 @@ def p_PostfixExpression(p):
     | PostIncrementExpression
     | PostDecrementExpression
     '''
+    if 'fields' in p[1].keys():
+        p[0] = p[1]
+        return
     p[0] = {}
     if 'idVal' in p[1].keys():
         p[0]['place'] = p[1]['idVal']
@@ -1780,6 +1812,9 @@ def p_Assignment(p):
     Assignment : LeftHandSide AssignmentOperator AssignmentExpression
     '''
     if 'access_type' not in p[1].keys():
+        if(len(p[1]['place'].split(".")) > 1):
+                print(p[1])
+                return
         attributes = ST.lookup(p[1]['place'])
         if attributes == None:
             raise Exception("Undeclared variable used: %s" %(p[1]['place']))
@@ -1870,3 +1905,4 @@ def parser_main():
 
 if __name__ == "__main__":
     parser_main()
+    print(class_table)
