@@ -120,8 +120,6 @@ class SymbolTable:
             'type' : idType,
             'is_array' : is_array,
             'arr_size' : arr_size,
-            'offset' : self.stack_size,
-            'code_gen' : SymbolTableEntry()
         }
 
         self.stack_size += 1

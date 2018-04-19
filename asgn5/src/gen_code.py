@@ -4,6 +4,7 @@ import copy
 from math import log
 from get_reg import *
 from utilities import *
+import global_vars as g
 
 class CodeGenerator:
     def gen_data_section(self):
@@ -12,23 +13,27 @@ class CodeGenerator:
         print("section\t.data\n")
         print("print_int:\tdb\t\"%d\",10,0")
         print("scan_int:\tdb\t\"%d\",0")
-        for symbol in symbol_table.keys():
-            if symbol_table[symbol].array_size != None:
-                print(str(symbol) + "\ttimes\t" + str(symbol_table[symbol].array_size) + "\tdd\t0")
-            else:
-                print(str(symbol) + "\tdd\t0")
+        for i in range(g.temp_var_count):
+                print("_" + str(i+1) + "\tdd\t0")
+        # for symbol in g.symbol_table.keys():
+            # if g.symbol_table[symbol].array_size != None:
+                # print(str(symbol) + "\ttimes\t" + str(g.symbol_table[symbol].array_size) + "\tdd\t0")
+            # else:
+                # print(str(symbol) + "\tdd\t0")
 
     def gen_start_template(self):
         print()
         print("section .text")
         print("\tglobal main")
-        print("main:")
 
     def op_print_int(self, instr):
-        print("\tpush ebp")
-        print("\tmov ebp,esp")
         loc = get_best_location(instr.inp1)
         save_context()
+        if loc not in reg_descriptor.keys():
+            print("\tmov eax, " + loc)
+            loc = "eax"
+        print("\tpush ebp")
+        print("\tmov ebp,esp")
         print("\tpush dword " + str(loc))
         print("\tpush dword print_int")
         print("\tcall printf")
@@ -203,24 +208,24 @@ class CodeGenerator:
                 update_reg_descriptors(R1, instr.out)
 
         elif instr.array_index_i1 == None and instr.array_index_o == None:
-            if len(symbol_table[instr.inp1].address_descriptor_reg) == 0:
+            if len(g.symbol_table[instr.inp1].address_descriptor_reg) == 0:
                 R1, flag = get_reg(instr)
                 print("\tmov " + R1 +", " + get_best_location(instr.inp1))
                 update_reg_descriptors(R1,instr.inp1)
 
-            if len(symbol_table[instr.inp1].address_descriptor_reg):
-                for regs in symbol_table[instr.out].address_descriptor_reg:
+            if len(g.symbol_table[instr.inp1].address_descriptor_reg):
+                for regs in g.symbol_table[instr.out].address_descriptor_reg:
                     reg_descriptor[regs].remove(instr.out)
-                symbol_table[instr.out].address_descriptor_reg.clear()
-                symbol_table[instr.out].address_descriptor_reg = copy.deepcopy(symbol_table[instr.inp1].address_descriptor_reg)
+                g.symbol_table[instr.out].address_descriptor_reg.clear()
+                g.symbol_table[instr.out].address_descriptor_reg = copy.deepcopy(g.symbol_table[instr.inp1].address_descriptor_reg)
 
-                for reg in symbol_table[instr.out].address_descriptor_reg:
+                for reg in g.symbol_table[instr.out].address_descriptor_reg:
                     reg_descriptor[reg].add(instr.out)
 
                 free_regs(instr)
 
         elif instr.array_index_i1 != None:
-            assert len(symbol_table[instr.inp1].address_descriptor_reg) == 0
+            assert len(g.symbol_table[instr.inp1].address_descriptor_reg) == 0
             R1, flag = get_reg(instr)
             print("\tmov " + R1 + ", " + get_best_location(instr.array_index_i1))
             print("\tshl " + R1 + ", 2")
@@ -232,7 +237,7 @@ class CodeGenerator:
             index = instr.array_index_o
             R1 = None
             if is_valid_sym(index):
-                if len(symbol_table[index].address_descriptor_reg) == 0:
+                if len(g.symbol_table[index].address_descriptor_reg) == 0:
                     R1, _ = get_reg(instr)
                     print("\tmov " + R1 + ", " + get_best_location(index))
                     update_reg_descriptors(R1, index)
@@ -369,9 +374,13 @@ class CodeGenerator:
         save_context()
         print("func_" + instr.label_name + ":")
 
+    def op_param(self, instr):
+        print("\tpush " + get_best_location(instr.inp1))
+
     def op_call_function(self, instr):
         save_context()
         print("\tcall func_" + instr.jmp_to_label)
+        print("\tadd esp, " + str(4 * int(instr.inp1)))
         if instr.out != None:
             update_reg_descriptors("eax",instr.out)
 
@@ -384,7 +393,25 @@ class CodeGenerator:
             save_context(exclude=["eax"])
         else:
             save_context()
+        print("\tmov esp, ebp")
+        print("\tpop ebp")
         print("\tret")
+
+    def op_stack_alloc(self, instr):
+        if instr.label_name == "main":
+            print("main:")
+        print("func__l" + instr.label_name + ":")
+        g.counter = 0
+        for i in g.symbol_table.keys():
+            if not is_temp_var(i) and i not in instr.arg_set:
+                g.counter += 1
+                g.symbol_table[i].address_descriptor_mem.add(-4 * g.counter)
+        for i, arg in enumerate(reversed(instr.arg_set)):
+            g.symbol_table[arg].address_descriptor_mem.add(4 * i + 8)
+
+        print("\tpush ebp")
+        print("\tmov ebp, esp")
+        print("\tsub esp, " + str(4*g.counter))
 
     def gen_code(self, instr):
         '''
@@ -430,6 +457,9 @@ class CodeGenerator:
         elif instr_type == "label":
             self.op_label(instr)
 
+        elif instr_type == "param":
+            self.op_param(instr)
+
         elif instr_type == "func_call":
             self.op_call_function(instr)
 
@@ -441,6 +471,11 @@ class CodeGenerator:
 
         elif instr_type == "unary":
             self.op_unary(instr)
+
+        elif instr_type == "begin_func":
+            self.op_stack_alloc(instr)
+            # for sym, symentry in g.symbol_table.items():
+                # print(sym, symentry.address_descriptor_mem)
 
 
 ###################################global generator############################
@@ -465,37 +500,42 @@ def next_use(leader, IR_code):
         # iterate through all basic blocks
         basic_block = IR_code[leader[b_start] - 1:leader[b_start + 1] - 1]
         # for x in basic_block:
-            # print(x.line_no)
-        # print()
+            # print(x.inp1, x.out)
+        for instr in basic_block:
+            if instr.instr_type == "begin_func" and instr.table != None:
+                g.symbol_table = instr.table
+
         for instr in reversed(basic_block):
-            instr.per_inst_next_use = copy.deepcopy(symbol_table)
+            instr.per_inst_next_use = copy.deepcopy(g.symbol_table)
 
             if is_valid_sym(instr.out):
-                symbol_table[instr.out].live = False
-                symbol_table[instr.out].next_use = None
+                g.symbol_table[instr.out].live = False
+                g.symbol_table[instr.out].next_use = None
 
             if is_valid_sym(instr.inp1):
-                symbol_table[instr.inp1].live = True
-                symbol_table[instr.inp1].next_use = instr.line_no
+                g.symbol_table[instr.inp1].live = True
+                g.symbol_table[instr.inp1].next_use = instr.line_no
 
             if is_valid_sym(instr.inp2):
-                symbol_table[instr.inp2].live = True
-                symbol_table[instr.inp2].next_use = instr.line_no
+                g.symbol_table[instr.inp2].live = True
+                g.symbol_table[instr.inp2].next_use = instr.line_no
 
             if instr.array_index_o and is_valid_sym(instr.array_index_o):
-                symbol_table[instr.array_index_o].live = True
-                symbol_table[instr.array_index_o].next_use = instr.line_no
+                g.symbol_table[instr.array_index_o].live = True
+                g.symbol_table[instr.array_index_o].next_use = instr.line_no
 
             if instr.array_index_i1 and is_valid_sym(instr.array_index_i1):
-                symbol_table[instr.array_index_i1].live = True
-                symbol_table[instr.array_index_i1].next_use = instr.line_no
+                g.symbol_table[instr.array_index_i1].live = True
+                g.symbol_table[instr.array_index_i1].next_use = instr.line_no
 
         for instr in basic_block:
             generator.gen_code(instr)
         # save_context()
         reset_live_and_next_use()
 
+
 if __name__ == "__main__":
+    # parser_main()
     leader, IR_code = read_three_address_code(sys.argv[1])
     generator.gen_data_section()
     generator.gen_start_template()

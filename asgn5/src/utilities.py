@@ -1,23 +1,23 @@
 import sys
 import csv
-from parser import *
+from LALR_parser import *
+import global_vars as g
 
 leader_instructions = [
     "ifgoto",
-    "ret",
+    "return",
     "label",
     "call",
     "print_int",
     "scan_int",
     "goto",
-    "func"
+    "func",
+    "begin_func",
+    "end_func"
 ]
 
-symbol_table = dict()
 reg_descriptor = dict()
 
-global_offset = 0
-curr_scope = 'start'
 
 reg_descriptor["ebx"] = set()
 reg_descriptor["ecx"] = set()
@@ -26,10 +26,18 @@ reg_descriptor["edi"] = set()
 reg_descriptor["edx"] = set()
 reg_descriptor["eax"] = set()
 
+func_symbol_table = None
+
+def is_temp_var(symbol):
+    if symbol[0] == "_":
+        return True
+    return False
+
 def reset_live_and_next_use():
-    for symbol in symbol_table.keys():
-        symbol_table[symbol].live = True
-        symbol_table[symbol].next_use = None
+    for symbol in g.symbol_table.keys():
+        g.symbol_table[symbol].live = True
+        g.symbol_table[symbol].next_use = None
+    return g.symbol_table
 
 def is_valid_number(symbol):
     if symbol[0] == "-":
@@ -37,7 +45,9 @@ def is_valid_number(symbol):
     return symbol.isdigit()
 
 def is_valid_sym(symbol):
-    if symbol != None and not is_valid_number(symbol):
+    if type(symbol) != type(''):
+        return False
+    elif symbol != None and not is_valid_number(symbol):
         return True
     return False
 
@@ -66,9 +76,11 @@ class Instruction:
         self.label_name = None
         self.jmp_to_line = None
         self.jmp_to_label = None
+        self.table = None
         self.per_inst_next_use = dict()
         self.build(statement)
         self.populate_per_inst_next_use()
+        self.arg_set = []
 
     def add_to_symbol_table(self, symbols, is_array_dec=False):
         '''
@@ -76,20 +88,23 @@ class Instruction:
         '''
         if not is_array_dec:
             for symbol in symbols:
-                if is_valid_sym(symbol) and symbol[0] != "_":
-                    if symbol not in symbol_table.keys():
-                        symbol_table[symbol] = SymbolTableEntry()
-                        offset = global_offset + ST[curr_scope].symbols[symbol]['offset']
-                        symbol_table[symbol].address_descriptor_mem.add(offset)
+                if is_valid_sym(symbol):
+                    if is_temp_var(symbol):
+                        g.temp_var_count += 1
+                    global func_symbol_table
+                    if symbol not in func_symbol_table.keys():
+                        func_symbol_table[symbol] = SymbolTableEntry()
+                        if is_temp_var(symbol):
+                            func_symbol_table[symbol].address_descriptor_mem.add(symbol)
         else:
             # an array is declared: arr[100]
             # store 'symbols[0]` in symbol table if not already present
             # set size  of array to `symbols[1]`
             if is_valid_sym(symbols[0]):
-                if symbols[0] not in symbol_table.keys():
-                    symbol_table[symbols[0]] = SymbolTableEntry()
-                    symbol_table[symbols[0]].address_descriptor_mem.add(symbols[0])
-                    symbol_table[symbols[0]].array_size = symbols[1]
+                if symbols[0] not in g.symbol_table.keys():
+                    g.symbol_table[symbols[0]] = SymbolTableEntry()
+                    g.symbol_table[symbols[0]].address_descriptor_mem.add(symbols[0])
+                    g.symbol_table[symbols[0]].array_size = symbols[1]
 
 
     def handle_array_notation(self, symbol):
@@ -159,16 +174,21 @@ class Instruction:
                 self.inp1, self.array_index_i1,
                 self.out, self.array_index_o
             ])
+        elif instr_type == "param":
+            self.instr_type = "param"
+            self.inp1 = statement[-1].strip()
+
         elif instr_type == "call":
             # 10, call, label_name
             # OR
-            # 10, call, label_name, optional_return
+            # 10, call, label_name, optional_return, no.of params
             self.instr_type = "func_call"
             if len(statement) == 3:
                 self.jmp_to_label = statement[-1].strip()
             else:
                 self.jmp_to_label = statement[2].strip()
-                self.out = statement[-1].strip()
+                self.out = statement[3].strip()
+                self.inp1 = statement[-1].strip()
                 self.add_to_symbol_table(self.out)
 
         elif instr_type == "label":
@@ -183,7 +203,10 @@ class Instruction:
         elif instr_type == "begin":
             self.instr_type = "begin_scope"
             self.label_name = statement[-1].strip()
-            self.inp1 = ST[curr_scope].stack_size
+
+        elif instr_type == "arg":
+            self.instr_type = "arg"
+            self.inp1 = statement[-1].strip()
 
         elif instr_type == "end":
             self.instr_type = "end_scope"
@@ -262,8 +285,10 @@ def read_three_address_code(filename):
     leader = set()
     leader.add(1)
     IR_code = []
+    last_func = None
+    arg_set = None
     with open(filename, 'r') as csvfile:
-        instruction_set = csv.reader(csvfile, delimiter=',')
+        instruction_set = list(csv.reader(csvfile, delimiter=','))
         index_label_to_be_added = set()
         for i,statement in enumerate(instruction_set):
             if len(statement) == 0:
@@ -272,25 +297,36 @@ def read_three_address_code(filename):
             IR_code.append(IR)
             line_no = IR.line_no
             instr_type = IR.instr_type
+
             if instr_type == "begin_scope":
-                curr_scope = IR.label_name
-                if instruction_set[i+1][1] == "func":
-                    pass
-                else:
-                    ST[IR.label_name].table_offset = global_offset
-                    global_offset += ST[curr_scope].stack_size
+                if instruction_set[i+1][1].strip() == "func":
+                    IR_code[i].instr_type = "begin_func"
+                    arg_set = []
+                    global func_symbol_table
+                    func_symbol_table = dict()
+                    last_func = {
+                        'label' : statement[2],
+                        'index' : i
+                    }
+
+            if instr_type == "arg":
+                arg_set.append(IR.inp1)
 
             if instr_type == "end_scope":
-                if instruction_set[i - 1][1] == "ret":
-                    pass
-                else:
-                    global_offset -= ST[curr_scope].stack_size
-                curr_scope = IR.label_name
+                if statement[2] == last_func['label']:
+                    IR_code[i].instr_type = "end_func"
+                    IR_code[last_func['index']].table = func_symbol_table
+                    IR_code[last_func['index']].arg_set = arg_set
+                    last_func = None
+                    func_symbol_table = None
 
+            instr_type = IR_code[i].instr_type
             if instr_type in leader_instructions:
                 if instr_type != "label" and instr_type != "print_int" and instr_type != "scan_int" and instr_type != "func":
                     line_no += 1
+
                 leader.add(line_no)
+
             if instr_type == "ifgoto" or instr_type == "goto":
                 goto_line = statement[-1].strip()
                 if goto_line.isdigit():

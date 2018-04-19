@@ -1,4 +1,15 @@
 from utilities import *
+import global_vars as g
+
+def get_mem_location(symbol):
+    for location in g.symbol_table[symbol].address_descriptor_mem:
+        if type(location) == type(0):
+            if location < 0:
+                return "[ebp" + str(location) + "]"
+            else:
+                return "[ebp+" + str(location) + "]"
+        else:
+            return "[" + location + "]"
 
 #TODO: in function get reg remove outfrom reg_descripto all regs
 def communitative_opt(instr):
@@ -11,34 +22,34 @@ def update_reg_descriptors(reg,symbol):
     reg_descriptor[reg].clear()
     if not is_valid_sym(symbol):
         return
-    for register in symbol_table[symbol].address_descriptor_reg:
+    for register in g.symbol_table[symbol].address_descriptor_reg:
         if register != reg:
             reg_descriptor[register].remove(symbol)
-    symbol_table[symbol].address_descriptor_reg.clear()
-    symbol_table[symbol].address_descriptor_reg.add(reg)
+    g.symbol_table[symbol].address_descriptor_reg.clear()
+    g.symbol_table[symbol].address_descriptor_reg.add(reg)
     reg_descriptor[reg].add(symbol)
 
 def free_regs(instr):
     if is_valid_sym(instr.inp1):
         if instr.per_inst_next_use[instr.inp1].next_use == None\
                 and instr.per_inst_next_use[instr.inp1].live == False:
-            for register in symbol_table[instr.inp1].address_descriptor_reg:
+            for register in g.symbol_table[instr.inp1].address_descriptor_reg:
                 reg_descriptor[register].remove(instr.inp1)
-            symbol_table[instr.inp1].address_descriptor_reg.clear()
+            g.symbol_table[instr.inp1].address_descriptor_reg.clear()
 
     if is_valid_sym(instr.inp2):
         if instr.per_inst_next_use[instr.inp2].next_use == None\
                 and instr.per_inst_next_use[instr.inp2].live == False:
-            for register in symbol_table[instr.inp2].address_descriptor_reg:
+            for register in g.symbol_table[instr.inp2].address_descriptor_reg:
                 reg_descriptor[register].remove(instr.inp2)
-            symbol_table[instr.inp2].address_descriptor_reg.clear()
+            g.symbol_table[instr.inp2].address_descriptor_reg.clear()
 
 def get_best_location(symbol,exclude_reg=[]):
     if is_valid_sym(symbol):
-        for reg in symbol_table[symbol].address_descriptor_reg:
+        for reg in g.symbol_table[symbol].address_descriptor_reg:
             if reg not in exclude_reg:
                 return reg
-        return "[" + symbol + "]"
+        return get_mem_location(symbol)
     elif symbol:
         return "dword " + symbol
 
@@ -48,8 +59,8 @@ def save_context(exclude=[]):
         if reg not in exclude:
             for symbol in symbols:
                 if symbol not in saved_symbols:
-                    print("\tmov [" + str(symbol) + "], " + str(reg))
-                    symbol_table[symbol].address_descriptor_reg.clear()
+                    print("\tmov " + get_mem_location(symbol) + ", " + str(reg))
+                    g.symbol_table[symbol].address_descriptor_reg.clear()
                     saved_symbols.add(symbol)
             reg_descriptor[reg].clear()
 
@@ -57,9 +68,9 @@ def save_context(exclude=[]):
 def save_reg_contents(reg):
     symbols = reg_descriptor[reg]
     for symbol in symbols:
-        for location in symbol_table[symbol].address_descriptor_mem:
-            print("\tmov ["+ location + "], " + reg)
-        symbol_table[symbol].address_descriptor_reg.remove(reg)
+        for location in g.symbol_table[symbol].address_descriptor_mem:
+            print("\tmov "+ get_mem_location(symbol) + ", " + reg)
+        g.symbol_table[symbol].address_descriptor_reg.remove(reg)
     reg_descriptor[reg].clear()
 
 
@@ -77,7 +88,7 @@ def get_reg(instr, compulsory=True, exclude=[]):
     if is_valid_sym(out):
         # allocate register for inp1
         if is_valid_sym(inp1):
-            for reg_name in symbol_table[inp1].address_descriptor_reg:
+            for reg_name in g.symbol_table[inp1].address_descriptor_reg:
                 if reg_name not in exclude:
                     if len(reg_descriptor[reg_name]) == 1 \
                             and instr.per_inst_next_use[inp1].next_use == None\
@@ -107,4 +118,4 @@ def get_reg(instr, compulsory=True, exclude=[]):
             return R1, True
 
         else:
-            return "[" + out + "]", False
+            return get_mem_location(out), False
