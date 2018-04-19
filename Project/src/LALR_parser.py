@@ -17,7 +17,6 @@ rules_store = []
 global_return_type = None
 field_count = 0
 
-class_list = []
 # Section 19.2
 def p_Goal(p):
     '''Goal : CompilationUnit'''
@@ -150,6 +149,7 @@ def p_ClassType(p):
     ClassType : Name
     '''
     p[0] = p[1]
+    p[0]['type'] = 'class'
     rules_store.append(p.slice)
 
 def p_ArrayType(p):
@@ -202,10 +202,6 @@ def p_CompilationUnit(p):
     | TypeDeclarations
     |
     '''
-    global class_list
-    class_list = p[1]
-    for i in p[1]: 
-        print(i)
     rules_store.append(p.slice)
 
 def p_ImportDeclarations(p):
@@ -220,7 +216,6 @@ def p_TypeDeclarations(p):
     TypeDeclarations : TypeDeclaration
     | TypeDeclarations TypeDeclaration
     '''
-    global class_list
     if(len(p)==2):
         p[0] = [p[1]]
     else:
@@ -295,6 +290,7 @@ def p_ClassDeclaration(p):
         p[3]['name'] = p[2]
         p[3]['parent'] = None
         p[0] = p[3]
+    ST.insert_in_sym_table(p[2],'class')
     rules_store.append(p.slice)
 
 def p_Inherit(p):
@@ -350,7 +346,6 @@ def p_ClassMemberDeclaration(p):
     | MethodDeclaration
     '''
     p[0] = p[1]
-    #print(p[0])
     rules_store.append(p.slice)
 
 def p_FieldMark(p):
@@ -448,7 +443,7 @@ def p_MethodDeclaration(p):
     TAC.emit('ret','','','', ST)
     ST.end_scope(TAC)
     rules_store.append(p.slice)
-    p[0] = ['method', p[1]]
+
 def p_MehodDeclMark2(p):
     '''
     MethodDeclMark2 :
@@ -648,7 +643,10 @@ def p_LocalVariableDeclaration(p):
     '''
     LocalVariableDeclaration : Type VariableDeclarators
     '''
+    print("-----")
+    print(p[1])
     for symbol in p[2]:
+        print(symbol)
         i = symbol['place']
         if 'type' in symbol:
             t = symbol['type']
@@ -1099,7 +1097,7 @@ def p_ReturnStatement(p):
         if curr_returned != None:
             if to_return[0] != curr_returned['type']:
                 raise Exception("Wrong return type in %s" %(ST.curr_scope))
-            if 'is_array' in curr_returned.keys() and 'is_array' in curr_returned.keys() and len(curr_returned['arr_size']) != to_return[1]:
+            if 'is_array' in curr_returned.keys() and len(curr_returned['arr_size']) != to_return[1]:
                 raise Exception("Dimension mismatch in return statement in %s" %(ST.curr_scope))
         elif curr_returned == None:
             if p[2]['type'] != to_return[0] or to_return[1] != 0:
@@ -1170,6 +1168,7 @@ def p_ClassInstanceCreationExpression(p):
     ClassInstanceCreationExpression : NEW ClassType L_PAREN R_PAREN
     | NEW ClassType L_PAREN ArgumentList R_PAREN
     '''
+    p[0] = p[2]
     rules_store.append(p.slice)
 
 def p_ArgumentList(p):
@@ -1453,36 +1452,25 @@ def p_MultiplicativeExpression(p):
     newPlace = ST.get_temp_var()
     p[0] = {
         'place' : newPlace,
+        'type' : 'TYPE_ERROR'
     }
-    # -----------------------------
-    if 'ret_type' in p[1].keys():
-        type1 = p[1]['ret_type'][0]
-        if p[1]['ret_type'][1] != 0:
-            raise Exception("Error")
-    else:
-        type1 = p[1]['type']
-
-    if 'ret_type' in p[3].keys():
-        type2 = p[3]['ret_type'][0]
-        if p[3]['ret_type'][1] != 0:
-            raise Exception("Error")
-    else:
-        type2 = p[3]['type']
-    # -----------------------------
+    #SANKET:- Same here with function declaration
+    if ('type' in p[1].keys() and p[1]['type'] == 'TYPE_ERROR') or ('type' in p[3].keys() and p[3]['type'] == 'TYPE_ERROR'):
+        return
     if p[2] == '*':
-        if type1 == "INT" and type2 == "INT":
+        if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
             TAC.emit(newPlace,p[1]['place'], p[3]['place'], p[2], ST)
             p[0]['type'] = 'INT'
         else:
             raise Exception('Error: Type is not compatible'+p[1]['place']+','+p[3]['place']+'.')
     elif p[2] == '/' :
-        if type1 == "INT" and type2 == "INT":
+        if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
             TAC.emit(newPlace, p[1]['place'], p[3]['place'], p[2], ST)
             p[0]['type'] = 'INT'
         else:
             raise Exception('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
     elif p[2] == '%':
-        if type1 == "INT" and type2 == "INT":
+        if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
             TAC.emit(newPlace,p[1]['place'],p[3]['place'],p[2], ST)
             p[0]['type'] = 'INT'
         else:
@@ -1502,23 +1490,12 @@ def p_AdditiveExpression(p):
     newPlace = ST.get_temp_var()
     p[0] = {
         'place' : newPlace,
+        'type' : 'TYPE_ERROR'
     }
+    if p[1]['type'] == 'TYPE_ERROR' or p[3]['type'] == 'TYPE_ERROR':
+        return
 
-    if 'ret_type' in p[1].keys():
-        type1 = p[1]['ret_type'][0]
-        if p[1]['ret_type'][1] != 0:
-            raise Exception("Error")
-    else:
-        type1 = p[1]['type']
-
-    if 'ret_type' in p[3].keys():
-        type2 = p[3]['ret_type'][0]
-        if p[3]['ret_type'][1] != 0:
-            raise Exception("Error")
-    else:
-        type2 = p[3]['type']
-
-    if type1 == "INT" and type2 == "INT":
+    if p[1]['type'] == 'INT' and p[3]['type'] == 'INT':
         TAC.emit(newPlace, p[1]['place'], p[3]['place'], p[2], ST)
         p[0]['type'] = 'INT'
     else:
@@ -1539,22 +1516,12 @@ def p_ShiftExpression(p):
     newPlace = ST.get_temp_var()
     p[0] = {
         'place' : newPlace,
+        'type' : 'TYPE_ERROR'
     }
-    if 'ret_type' in p[1].keys():
-        type1 = p[1]['ret_type'][0]
-        if p[1]['ret_type'][1] != 0:
-            raise Exception("Error")
-    else:
-        type1 = p[1]['type']
+    if p[1]['type'] == 'TYPE_ERROR' or p[3]['type'] == 'TYPE_ERROR':
+        return
 
-    if 'ret_type' in p[3].keys():
-        type2 = p[3]['ret_type'][0]
-        if p[3]['ret_type'][1] != 0:
-            raise Exception("Error")
-    else:
-        type2 = p[3]['type']
-
-    if type1 == "INT" and type2 == "INT":
+    if p[1]['type'] == 'INT' and p[3]['type'] == 'INT':
         TAC.emit(newPlace, p[1]['place'], p[3]['place'], p[2], ST)
         p[0]['type'] = 'INT'
     else:
@@ -1581,23 +1548,12 @@ def p_RelationalExpression(p):
     newPlace = ST.get_temp_var()
     p[0] = {
         'place' : newPlace,
+        'type' : 'TYPE_ERROR'
     }
+    if p[1]['type']=='TYPE_ERROR' or p[3]['type']=='TYPE_ERROR':
+        return
 
-    if 'ret_type' in p[1].keys():
-        type1 = p[1]['ret_type'][0]
-        if p[1]['ret_type'][1] != 0:
-            raise Exception("Error")
-    else:
-        type1 = p[1]['type']
-
-    if 'ret_type' in p[3].keys():
-        type2 = p[3]['ret_type'][0]
-        if p[3]['ret_type'][1] != 0:
-            raise Exception("Error")
-    else:
-        type2 = p[3]['type']
-
-    if type1 == "INT" and type2 == "INT":
+    if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
         if p[2]=='>':
             TAC.emit('ifgoto', p[1]['place'], 'gt ' + p[3]['place'], l2, ST)
             TAC.emit('label', l1, '', '', ST)
@@ -1654,22 +1610,11 @@ def p_EqualityExpression(p):
     newPlace = ST.get_temp_var()
     p[0]={
         'place' : newPlace,
+        'type' : 'TYPE_ERROR'
     }
-    if 'ret_type' in p[1].keys():
-        type1 = p[1]['ret_type'][0]
-        if p[1]['ret_type'][1] != 0:
-            raise Exception("Error")
-    else:
-        type1 = p[1]['type']
-
-    if 'ret_type' in p[3].keys():
-        type2 = p[3]['ret_type'][0]
-        if p[3]['ret_type'][1] != 0:
-            raise Exception("Error")
-    else:
-        type2 = p[3]['type']
-
-    if type1 == "INT" and type2 == "INT":
+    if p[1]['type']=='TYPE_ERROR' or p[3]['type']=='TYPE_ERROR':
+        return
+    if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
         if(p[2][0]=='='):
             TAC.emit('ifgoto', p[1]['place'], 'eq ' + p[3]['place'], l2, ST)
             TAC.emit('label', l1, '', '', ST)
@@ -1703,22 +1648,11 @@ def p_AndExpression(p):
     newPlace = ST.get_temp_var()
     p[0] = {
         'place' : newPlace,
+        'type' : 'TYPE_ERROR'
     }
-    if 'ret_type' in p[1].keys():
-        type1 = p[1]['ret_type'][0]
-        if p[1]['ret_type'][1] != 0:
-            raise Exception("Error")
-    else:
-        type1 = p[1]['type']
-
-    if 'ret_type' in p[3].keys():
-        type2 = p[3]['ret_type'][0]
-        if p[3]['ret_type'][1] != 0:
-            raise Exception("Error")
-    else:
-        type2 = p[3]['type']
-
-    if type1 == "INT" and type2 == "INT":
+    if p[1]['type']=='TYPE_ERROR' or p[3]['type']=='TYPE_ERROR':
+        return
+    if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
         TAC.emit(newPlace,p[1]['place'],p[3]['place'],'&', ST)
         p[0]['type'] = 'INT'
     else:
@@ -1736,22 +1670,11 @@ def p_ExclusiveOrExpression(p):
     newPlace = ST.get_temp_var()
     p[0] = {
         'place' : newPlace,
+        'type' : 'TYPE_ERROR'
     }
-    if 'ret_type' in p[1].keys():
-        type1 = p[1]['ret_type'][0]
-        if p[1]['ret_type'][1] != 0:
-            raise Exception("Error")
-    else:
-        type1 = p[1]['type']
-
-    if 'ret_type' in p[3].keys():
-        type2 = p[3]['ret_type'][0]
-        if p[3]['ret_type'][1] != 0:
-            raise Exception("Error")
-    else:
-        type2 = p[3]['type']
-
-    if type1 == "INT" and type2 == "INT":
+    if p[1]['type']=='TYPE_ERROR' or p[3]['type']=='TYPE_ERROR':
+        return
+    if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
         TAC.emit(newPlace,p[1]['place'],p[3]['place'],'^', ST)
         p[0]['type'] = 'INT'
     else:
@@ -1769,22 +1692,11 @@ def p_InclusiveOrExpression(p):
     newPlace = ST.get_temp_var()
     p[0] = {
         'place' : newPlace,
+        'type' : 'TYPE_ERROR'
     }
-    if 'ret_type' in p[1].keys():
-        type1 = p[1]['ret_type'][0]
-        if p[1]['ret_type'][1] != 0:
-            raise Exception("Error")
-    else:
-        type1 = p[1]['type']
-
-    if 'ret_type' in p[3].keys():
-        type2 = p[3]['ret_type'][0]
-        if p[3]['ret_type'][1] != 0:
-            raise Exception("Error")
-    else:
-        type2 = p[3]['type']
-
-    if type1 == "INT" and type2 == "INT":
+    if p[1]['type']=='TYPE_ERROR' or p[3]['type']=='TYPE_ERROR':
+        return
+    if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
         TAC.emit(newPlace, p[1]['place'], p[3]['place'], '|', ST)
         p[0]['type'] = 'INT'
     else:
@@ -1802,22 +1714,12 @@ def p_ConditionalAndExpression(p):
     newPlace = ST.get_temp_var()
     p[0] = {
         'place' : newPlace,
+        'type' : 'TYPE_ERROR'
     }
-    if 'ret_type' in p[1].keys():
-        type1 = p[1]['ret_type'][0]
-        if p[1]['ret_type'][1] != 0:
-            raise Exception("Error")
-    else:
-        type1 = p[1]['type']
-
-    if 'ret_type' in p[3].keys():
-        type2 = p[3]['ret_type'][0]
-        if p[3]['ret_type'][1] != 0:
-            raise Exception("Error")
-    else:
-        type2 = p[3]['type']
-
-    if type1 == "INT" and type2 == "INT":
+    if p[1]['type']=='TYPE_ERROR' or p[3]['type']=='TYPE_ERROR':
+        p[0]=p[1]
+        return
+    if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
         l1 = ST.make_label()
         TAC.emit(newPlace,p[1]['place'],'','=', ST)
         TAC.emit('ifgoto',p[1]['place'],'eq 0',l1, ST)
@@ -1839,22 +1741,11 @@ def p_ConditionalOrExpression(p):
     newPlace = ST.get_temp_var()
     p[0] = {
         'place' : newPlace,
+        'type' : 'TYPE_ERROR'
     }
-    if 'ret_type' in p[1].keys():
-        type1 = p[1]['ret_type'][0]
-        if p[1]['ret_type'][1] != 0:
-            raise Exception("Error")
-    else:
-        type1 = p[1]['type']
-
-    if 'ret_type' in p[3].keys():
-        type2 = p[3]['ret_type'][0]
-        if p[3]['ret_type'][1] != 0:
-            raise Exception("Error")
-    else:
-        type2 = p[3]['type']
-
-    if type1 == "INT" and type2 == "INT":
+    if p[1]['type']=='TYPE_ERROR' or p[3]['type']=='TYPE_ERROR':
+        return
+    if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
         l1 = ST.make_label()
         TAC.emit(newPlace,p[1]['place'],'','=', ST)
         TAC.emit('ifgoto',p[1]['place'],'eq 1',l1, ST)
@@ -1974,7 +1865,7 @@ def parser_main():
     # print("******************")
     # for i in TAC.code_list:
         # print(i)
-    #TAC.generate()
+    TAC.generate()
     # ST.print_scope_table()
 
 if __name__ == "__main__":
