@@ -201,8 +201,6 @@ def p_CompilationUnit(p):
     | TypeDeclarations
     |
     '''
-    for i in p[1]: 
-        print(i)
     rules_store.append(p.slice)
 
 def p_ImportDeclarations(p):
@@ -217,10 +215,6 @@ def p_TypeDeclarations(p):
     TypeDeclarations : TypeDeclaration
     | TypeDeclarations TypeDeclaration
     '''
-    if(len(p)==2):
-        p[0] = [p[1]]
-    else:
-        p[0] = p[1] + [p[2]]
     rules_store.append(p.slice)
 
 def p_PackageDeclaration(p):
@@ -253,7 +247,6 @@ def p_TypeDeclaration(p):
     TypeDeclaration : ClassDeclaration
     | STMT_TERMINATOR
     '''
-    p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_Modifiers(p):
@@ -261,11 +254,6 @@ def p_Modifiers(p):
     Modifiers : Modifier
     | Modifiers Modifier
     '''
-    if(len(p)==2):
-        p[0] = [p[1]]
-    else:
-        p[0] = p[1] + [p[2]]
-    
     rules_store.append(p.slice)
 
 def p_Modifier(p):
@@ -273,31 +261,22 @@ def p_Modifier(p):
     Modifier : STATIC
     | FINAL
     '''
-    p[0] = p[1]
-
     rules_store.append(p.slice)
 
 # Section 19.8
 def p_ClassDeclaration(p):
     '''
-    ClassDeclaration : CLASS Identifier Inherit ClassBody 
+    ClassDeclaration : Modifiers CLASS Identifier Inherit ClassBody
+    | Modifiers CLASS Identifier ClassBody
+    | CLASS Identifier Inherit ClassBody
     | CLASS Identifier ClassBody
     '''
-    if(len(p) == 5):
-        p[4]['name'] = p[2]
-        p[4]['parent'] = p[3]['place']
-        p[0] = p[4]
-    else:
-        p[3]['name'] = p[2]
-        p[3]['parent'] = None
-        p[0] = p[3]
     rules_store.append(p.slice)
 
 def p_Inherit(p):
     '''
     Inherit : EXTENDS ClassType
     '''
-    p[0] = p[2]
     rules_store.append(p.slice)
 
 def p_ClassBody(p):
@@ -305,17 +284,6 @@ def p_ClassBody(p):
     ClassBody : BLOCK_OPENER BLOCK_CLOSER
     | BLOCK_OPENER ClassBodyDeclarations BLOCK_CLOSER
     '''
-    if(len(p) == 4):
-        global field_count
-        p[0] = dict()
-        p[0]['count'] = 0
-    for i in p[2]:
-        if(i is not None):
-            p[0][i[0]] = [field_count] + i[1:]
-            p[0]['count'] += 1
-            field_count += 1
-    field_count = 0
-    
     rules_store.append(p.slice)
 
 def p_ClassBodyDeclarations(p):
@@ -323,21 +291,14 @@ def p_ClassBodyDeclarations(p):
     ClassBodyDeclarations : ClassBodyDeclaration
     | ClassBodyDeclarations ClassBodyDeclaration
     '''
-    if(len(p)==2):
-        p[0] = [p[1]]
-    else:
-        p[0] = p[1] + [p[2]]
-
     rules_store.append(p.slice)
 
 def p_ClassBodyDeclaration(p):
     '''
-    ClassBodyDeclaration : ClassMemberDeclaration FieldMark
+    ClassBodyDeclaration : ClassMemberDeclaration
     | ConstructorDeclaration
     | StaticInitializer
     '''
-    if(len(p)==3):
-        p[0] = p[1]
     rules_store.append(p.slice)
 
 def p_ClassMemberDeclaration(p):
@@ -345,26 +306,13 @@ def p_ClassMemberDeclaration(p):
     ClassMemberDeclaration : FieldDeclaration
     | MethodDeclaration
     '''
-    p[0] = p[1]
     rules_store.append(p.slice)
-
-def p_FieldMark(p):
-    '''
-    FieldMark :
-    '''
-    rules_store.append(p.slice)
-
 
 def p_FieldDeclaration(p):
     '''
-    FieldDeclaration : Modifiers Type VariableDeclaratorId STMT_TERMINATOR
-    | Type VariableDeclaratorId STMT_TERMINATOR
+    FieldDeclaration : Modifiers Type VariableDeclarators STMT_TERMINATOR
+    | LocalVariableDeclaration STMT_TERMINATOR
     '''
-    if(len(p) == 4):
-        p[0] = [p[2],p[1],None]
-    else:    
-        p[0] = [p[3],p[2],p[1]]
-
     rules_store.append(p.slice)
 
 def p_VariableDeclarators(p):
