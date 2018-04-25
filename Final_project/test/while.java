@@ -5,6 +5,7 @@ class Wh {
         while (raktim < 5)
         {
 		raktim++;
+        println(raktim);
 
         }
 

@@ -10,11 +10,13 @@ class CodeGenerator:
     def gen_data_section(self):
         print("extern printf\n")
         print("extern scanf\n")
+        print("extern malloc\n")
         print("section\t.data\n")
         print("print_int:\tdb\t\"%d\",10,0")
+        print("print_char:\tdb\t\"%c\",0")
         print("scan_int:\tdb\t\"%d\",0")
-        for i in range(g.temp_var_count):
-                print("_" + str(i+1) + "\tdd\t0")
+        for temp_var in g.temp_var_set:
+            print(temp_var + "\tdd\t0")
         # for symbol in g.symbol_table.keys():
             # if g.symbol_table[symbol].array_size != None:
                 # print(str(symbol) + "\ttimes\t" + str(g.symbol_table[symbol].array_size) + "\tdd\t0")
@@ -41,11 +43,28 @@ class CodeGenerator:
         print("\tmov esp, ebp")
         print("\tpop ebp")
 
-    def op_scan_int(self, instr):
+    def op_print_char(self, instr):
+        loc = get_best_location(instr.inp1)
         save_context()
+        if loc not in reg_descriptor.keys():
+            print("\tmov eax, " + loc)
+            loc = "eax"
         print("\tpush ebp")
         print("\tmov ebp,esp")
-        print("\tpush " + instr.out)
+        print("\tpush dword " + str(loc))
+        print("\tpush dword print_char")
+        print("\tcall printf")
+        print("\tadd esp, 8")
+        print("\tmov esp, ebp")
+        print("\tpop ebp")
+
+    def op_scan_int(self, instr):
+        save_context()
+        loc = get_best_location(instr.out)
+        print("\tlea eax, " + loc)
+        print("\tpush ebp")
+        print("\tmov ebp,esp")
+        print("\tpush eax")
         print("\tpush scan_int")
         print("\tcall scanf")
         print("\tadd esp, 8")
@@ -225,40 +244,54 @@ class CodeGenerator:
                 free_regs(instr)
 
         elif instr.array_index_i1 != None:
-            assert len(g.symbol_table[instr.inp1].address_descriptor_reg) == 0
+            # assert len(g.symbol_table[instr.inp1].address_descriptor_reg) == 0
             R1, flag = get_reg(instr)
             print("\tmov " + R1 + ", " + get_best_location(instr.array_index_i1))
             print("\tshl " + R1 + ", 2")
-            print("\tadd " + R1 + ", " + instr.inp1)
+            print("\tadd " + R1 + ", " + get_best_location(instr.inp1))
             print("\tmov " + R1 + ", [" + R1 + "]")
             update_reg_descriptors(R1, instr.out)
 
         else:
             index = instr.array_index_o
-            R1 = None
-            if is_valid_sym(index):
-                if len(g.symbol_table[index].address_descriptor_reg) == 0:
-                    R1, _ = get_reg(instr)
-                    print("\tmov " + R1 + ", " + get_best_location(index))
-                    update_reg_descriptors(R1, index)
-                else:
-                    R1 = get_best_location(index)
+            loc_arr = get_best_location(instr.out)
+            if loc_arr in reg_descriptor.keys():
+                R1 = None
+                if is_valid_sym(index):
+                    if len(g.symbol_table[index].address_descriptor_reg) == 0:
+                        R1, _ = get_reg(instr, exclude=[loc_arr])
+                        print("\tmov " + R1 + ", " + get_best_location(index))
+                        update_reg_descriptors(R1, index)
+                    else:
+                        R1 = get_best_location(index)
 
-                inp_reg = R1
-                if index != instr.inp1:
-                    inp_reg, flag = get_reg(instr, exclude=[R1])
+                    inp_reg = R1
+                    if index != instr.inp1:
+                        inp_reg, flag = get_reg(instr, exclude=[R1, loc_arr])
+                        if flag:
+                            print("\tmov " + inp_reg + ", " + get_best_location(instr.inp1))
+                            update_reg_descriptors(inp_reg,instr.inp1)
+                    print("\tmov [" + loc_arr + "," + R1 + "*4], " + inp_reg)
+                else:
+                    index = 4 * int(index)
+                    inp_reg, flag = get_reg(instr)
                     if flag:
                         print("\tmov " + inp_reg + ", " + get_best_location(instr.inp1))
                         update_reg_descriptors(inp_reg,instr.inp1)
-                print("\tmov [" + instr.out + "," + R1 + "*4], " + inp_reg)
+                    print("\tmov [" + loc_arr + "+" + str(index) + "], " + inp_reg)
             else:
-                index = 4 * int(index)
-                inp_reg, flag = get_reg(instr)
-                if flag:
-                    print("\tmov " + inp_reg + ", " + get_best_location(instr.inp1))
-                    update_reg_descriptors(inp_reg,instr.inp1)
-                print("\tmov [" + instr.out + "+" + str(index) + "], " + inp_reg)
-
+                loc_inp1 = get_best_location(instr.inp1)
+                R1, _ = get_reg(instr, exclude=[loc_inp1])
+                print("\tmov " + R1 + ", " + get_best_location(index))
+                print("\tshl " + R1 + ", 2")
+                print("\tadd " + R1 + ", " + loc_arr)
+                if loc_inp1 in reg_descriptor.keys():
+                    print("\tmov [" + R1 + "], " + loc_inp1)
+                else:
+                    inp_reg, _ = get_reg(instr, exclude=[R1])
+                    print("\tmov " + inp_reg + ", " + loc_inp1)
+                    update_reg_descriptors(inp_reg, instr.inp1)
+                    print("\tmov [" + R1 + "], " + inp_reg)
 
     def op_logical(self, instr):
         # TODO: logical &&, ||
@@ -375,7 +408,7 @@ class CodeGenerator:
         print("func_" + instr.label_name + ":")
 
     def op_param(self, instr):
-        print("\tpush " + get_best_location(instr.inp1))
+        print("\tpush dword " + get_best_location(instr.inp1))
 
     def op_call_function(self, instr):
         save_context()
@@ -412,6 +445,22 @@ class CodeGenerator:
         print("\tpush ebp")
         print("\tmov ebp, esp")
         print("\tsub esp, " + str(4*g.counter))
+
+    def op_array_decl(self, instr):
+        loc = get_best_location(instr.array_index_i1)
+        save_context()
+        if loc not in reg_descriptor.keys():
+            print("\tmov eax," + loc)
+            loc = "eax"
+        print("\tpush ebp")
+        print("\tmov ebp, esp")
+        print("\tshl " + loc + ", 2")
+        print("\tpush " + loc)
+        print("\tcall malloc")
+        print("\tadd esp, 4")
+        print("\tmov esp, ebp")
+        print("\tpop ebp")
+        update_reg_descriptors("eax", instr.inp1)
 
     def gen_code(self, instr):
         '''
@@ -466,6 +515,9 @@ class CodeGenerator:
         elif instr_type == "print_int":
             self.op_print_int(instr)
 
+        elif instr_type == "print_char":
+            self.op_print_char(instr)
+
         elif instr_type == "scan_int":
             self.op_scan_int(instr)
 
@@ -476,6 +528,9 @@ class CodeGenerator:
             self.op_stack_alloc(instr)
             # for sym, symentry in g.symbol_table.items():
                 # print(sym, symentry.address_descriptor_mem)
+
+        elif instr_type == "array_declaration":
+            self.op_array_decl(instr)
 
 
 ###################################global generator############################
@@ -508,7 +563,7 @@ def next_use(leader, IR_code):
         for instr in reversed(basic_block):
             instr.per_inst_next_use = copy.deepcopy(g.symbol_table)
 
-            if is_valid_sym(instr.out):
+            if is_valid_sym(instr.out) and instr.array_index_o == None:
                 g.symbol_table[instr.out].live = False
                 g.symbol_table[instr.out].next_use = None
 

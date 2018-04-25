@@ -93,6 +93,7 @@ def get_reg(instr, compulsory=True, exclude=[]):
                     if len(reg_descriptor[reg_name]) == 1 \
                             and instr.per_inst_next_use[inp1].next_use == None\
                             and not instr.per_inst_next_use[inp1].live:
+                        g.symbol_table[inp1].address_descriptor_reg.remove(reg_name)
                         return reg_name, False
 
         for key, value in reg_descriptor.items():
@@ -105,6 +106,7 @@ def get_reg(instr, compulsory=True, exclude=[]):
             next_use = -1000000000
             for reg, content in reg_descriptor.items():
                 if reg not in exclude:
+                    to_break = False
                     for var in content:
                         n_use = instr.per_inst_next_use[var].next_use
                         if n_use and n_use > next_use:
@@ -113,7 +115,10 @@ def get_reg(instr, compulsory=True, exclude=[]):
                             R1 = reg
                         if not n_use:
                             R1 = reg
+                            to_break = True
                             break
+                    if to_break:
+                        break
             save_reg_contents(R1)
             return R1, True
 

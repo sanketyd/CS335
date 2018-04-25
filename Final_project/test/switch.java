@@ -9,20 +9,20 @@ class Main{
         int c = 99;
         switch(a) {
             case 1:
-                if(b == 0) System.out.println(c);
+                if(b == 0) a = 2;
             case 2:
                 if(b==1) a = 10;
             case 3:
                 if(b==2){
                     int x = 10;
                     while(x>1){
-                        System.out.println(x);
+                        //System.out.println(x);
                         x--;
                         for(int a = 0; a < 5; a++){
                             int l = sum(x,a);
-                            System.out.println(a);
+                            //System.out.println(a);
                         }
-                        System.out.println(a);
+                        //System.out.println(a);
                     }
                     a = x*a;
                 }
@@ -30,6 +30,6 @@ class Main{
                 a--;
                 break;
         }
-        System.out.println(a);
+        //System.out.println(a);
     }
 }

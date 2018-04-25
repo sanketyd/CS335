@@ -5,10 +5,11 @@ import ply.yacc as yacc
 import lexer
 from three_address_code import TAC
 from new_sym_table import ScopeTable
+import global_vars as g
 
 TAC = TAC()
 ST = ScopeTable()
-
+class_table = dict()
 stackbegin = []
 stackend = []
 
@@ -16,6 +17,7 @@ rules_store = []
 
 global_return_type = None
 field_count = 0
+
 # Section 19.2
 def p_Goal(p):
     '''Goal : CompilationUnit'''
@@ -148,6 +150,7 @@ def p_ClassType(p):
     ClassType : Name
     '''
     p[0] = p[1]
+    p[0]['type'] = 'class'
     rules_store.append(p.slice)
 
 def p_ArrayType(p):
@@ -183,9 +186,38 @@ def p_SimpleName(p):
 
 def p_QualifiedName(p):
     ''' QualifiedName : Name DOT Identifier'''
-    p[0]= {
-        'place' : p[1]['place'] + "." + p[3]
-    }
+    attributes = ST.lookup(p[1]['place'])
+    var_list = class_table[attributes['type']]['fields']
+    func_list = class_table[attributes['type']]['methods']
+    index = -1
+    for i, var in enumerate(var_list):
+        if var[0] == p[3]:
+            index = i
+            is_func = False
+            break
+    if index == -1:
+        for i, var in enumerate(func_list):
+            if var['name'] == p[3]:
+                index = i
+                is_func = True
+                break
+    if index == -1:
+        raise Exception("No such member present!!")
+
+    if not is_func:
+        p[0] = {}
+        p[0]['name'] = p[1]['place'] + '_obj_' + attributes['type']
+        p[0]['access_type'] = 'array'
+        p[0]['index'] = str(index)
+        p[0]['arr_size'] = [str(class_table[attributes['type']]['count'])]
+        p[0]['type'] = 'INT'
+        p[0]['is_array'] = True
+    else:
+        p[0] = {}
+        p[0]['place'] = p[3]
+        p[0]['this'] = p[1]['place'] + '_obj_' + attributes['type']
+        p[0]['var_list'] = var_list
+
     rules_store.append(p.slice)
 
 # Section 19.6
@@ -200,8 +232,6 @@ def p_CompilationUnit(p):
     | TypeDeclarations
     |
     '''
-    for i in p[1]: 
-        print(i)
     rules_store.append(p.slice)
 
 def p_ImportDeclarations(p):
@@ -216,9 +246,12 @@ def p_TypeDeclarations(p):
     TypeDeclarations : TypeDeclaration
     | TypeDeclarations TypeDeclaration
     '''
+    global class_table
     if(len(p)==2):
+        class_table[p[1]['name']] = p[1]
         p[0] = [p[1]]
     else:
+        class_table[p[2]['name']] = p[2]
         p[0] = p[1] + [p[2]]
     rules_store.append(p.slice)
 
@@ -264,7 +297,6 @@ def p_Modifiers(p):
         p[0] = [p[1]]
     else:
         p[0] = p[1] + [p[2]]
-    
     rules_store.append(p.slice)
 
 def p_Modifier(p):
@@ -279,18 +311,25 @@ def p_Modifier(p):
 # Section 19.8
 def p_ClassDeclaration(p):
     '''
-    ClassDeclaration : CLASS Identifier Inherit ClassBody 
-    | CLASS Identifier ClassBody
+    ClassDeclaration : CLASS Identifier ClsMark Inherit ClassBody
+    | CLASS Identifier ClsMark ClassBody
     '''
-    if(len(p) == 5):
-        p[4]['name'] = p[2]
-        p[4]['parent'] = p[3]['place']
-        p[0] = p[4]
+    if(len(p) == 6):
+        p[5]['name'] = p[2]
+        p[5]['parent'] = p[4]['place']
+        p[0] = p[5]
     else:
-        p[3]['name'] = p[2]
-        p[3]['parent'] = None
-        p[0] = p[3]
+        p[4]['name'] = p[2]
+        p[4]['parent'] = None
+        p[0] = p[4]
+    ST.insert_in_sym_table(p[2],'class')
     rules_store.append(p.slice)
+
+def p_ClsMark(p):
+    ''' ClsMark : '''
+    g.curr_class = p[-1]
+    g.members = []
+    g.func_members = []
 
 def p_Inherit(p):
     '''
@@ -307,14 +346,10 @@ def p_ClassBody(p):
     if(len(p) == 4):
         global field_count
         p[0] = dict()
-        p[0]['count'] = 0
-    for i in p[2]:
-        if(i is not None):
-            p[0][i[0]] = [field_count] + i[1:]
-            p[0]['count'] += 1
-            field_count += 1
+        p[0]['fields'] = [i for i in p[2] if type(i) != type({})]
+        p[0]['methods'] = [i for i in p[2] if type(i) == type({})]
+        p[0]['count'] = len(p[0]['fields'])
     field_count = 0
-    
     rules_store.append(p.slice)
 
 def p_ClassBodyDeclarations(p):
@@ -361,8 +396,9 @@ def p_FieldDeclaration(p):
     '''
     if(len(p) == 4):
         p[0] = [p[2],p[1],None]
-    else:    
+    else:
         p[0] = [p[3],p[2],p[1]]
+    g.members.append(p[0])
 
     rules_store.append(p.slice)
 
@@ -390,6 +426,18 @@ def p_VariableDeclarator(p):
         return
     elif type(p[3]) != type({}):
         return
+    if 'fields' in p[3].keys():
+        obj_name = p[1] + "_obj_" + p[3]['name']
+        size = p[3]['count']
+        # to_emit.append(['declare', p[1], t, p[3]['type'], ST])
+        t = ST.get_temp_var()
+        to_emit.append([t, str(size), '', '=', ST])
+        to_emit.append(['declare', obj_name, t, 'INT', ST])
+        p[0]['class_name'] = p[3]['name']
+        p[0]['place'] = p[1]
+        p[0]['emit_intrs'] = to_emit
+        ST.insert_in_sym_table(obj_name, 'INT', is_array=True, arr_size=size)
+        return
 
     if 'is_array' in p[3].keys() and p[3]['is_array']:
         t = ST.get_temp_var()
@@ -404,12 +452,17 @@ def p_VariableDeclarator(p):
     elif 'ret_type' in p[3].keys():
         p[0]['place'] = p[1]
         p[0]['type'] = p[3]['ret_type']
-
+        to_emit.append([p[1], p[3]['place'], '', '=', ST])
+        p[0]['emit_intrs'] = to_emit
     else:
         to_emit.append([p[1], p[3]['place'], '', p[2], ST])
         p[0]['place'] = p[1]
         if 'is_var' not in p[3]:
             attributes = ST.lookup(p[3]['place'])
+            if attributes == None:
+                p[0]['type'] = p[3]['type']
+                p[0]['emit_intrs'] = to_emit
+                return
             if 'is_array' in attributes and attributes['is_array']:
                 p[0]['is_array'] = True
                 p[0]['arr_size'] = attributes['arr_size']
@@ -430,15 +483,20 @@ def p_VariableDeclaratorId(p):
 def p_VariableInitializer(p):
     '''
     VariableInitializer : Expression
-    | ArrayInitializer
+    | ArrayInitializer classMark
     '''
     p[0] = p[1]
     rules_store.append(p.slice)
 
+def p_classMark(p):
+    '''
+    classMark :
+    '''
 def p_MethodDeclaration(p):
     '''
     MethodDeclaration : MethodHeader MethodDeclMark2 MethodBody
     '''
+    p[0] = p[1]
     TAC.emit('ret','','','', ST)
     ST.end_scope(TAC)
     rules_store.append(p.slice)
@@ -487,6 +545,7 @@ def p_MethodDeclarator(p):
     MethodDeclarator : Identifier L_PAREN MethodDeclMark1 R_PAREN
     | Identifier L_PAREN MethodDeclMark1 FormalParameterList R_PAREN
     '''
+    g.func_members.append(p[1])
     p[0] = {
         'name' : p[1],
     }
@@ -498,9 +557,22 @@ def p_MethodDeclarator(p):
     stackbegin.append(p[1])
     stackend.append(p[1])
     if len(p) == 6:
-        for parameter in p[4]:
-            ST.insert_in_sym_table(parameter['place'],parameter['type'])
+        for i in range(len(p[4])):
+            parameter = p[4][i]
+            if 'is_array' in parameter and parameter['is_array']:
+                try:
+                    size = parameter['arr_size']
+                    tmp = p[4][i + size]
+                    dims = []
+                    for j in range(size):
+                        dims.append(p[4][i + 1 + j]['place'])
+                    ST.insert_in_sym_table(parameter['place'],parameter['type'], is_array=True, arr_size=dims)
+                except:
+                    raise Exception("Array passing guidelines not followed properly for arg %s" %(i))
+            else:
+                ST.insert_in_sym_table(parameter['place'],parameter['type'], is_array=False)
     TAC.emit('func', p[1], '', '', ST)
+    TAC.emit('arg', 'this', '', '', ST)
     for arg in p[0]['args']:
         TAC.emit('arg', arg['place'], '', '', ST)
     rules_store.append(p.slice)
@@ -527,9 +599,12 @@ def p_FormalParameter(p):
     FormalParameter : Type VariableDeclaratorId
     '''
     p[0] = {
-        'place' : p[2][0],
+        'place' : p[2],
         'type' : p[1]['type']
     }
+    if 'is_array' in p[1].keys() and p[1]['is_array']:
+        p[0]['is_array'] = True
+        p[0]['arr_size'] = p[1]['arr_size']
     rules_store.append(p.slice)
 
 def p_Throws(p):
@@ -565,6 +640,8 @@ def p_ConstructorDeclaration(p):
     | ConstructorDeclarator Throws ConstructorBody
     | ConstructorDeclarator ConstructorBody
     '''
+    if(len(p) == 3):
+        pass
     rules_store.append(p.slice)
 
 def p_ConstructorDeclarator(p):
@@ -577,11 +654,11 @@ def p_ConstructorDeclarator(p):
 def p_ConstructorBody(p):
     '''
     ConstructorBody : BLOCK_OPENER ExplicitConstructorInvocation BlockStatements BLOCK_CLOSER
-    | BLOCK_OPENER ExplicitConstructorInvocation BLOCK_CLOSER
     | BLOCK_OPENER BlockStatements BLOCK_CLOSER
     | BLOCK_OPENER BLOCK_CLOSER
     '''
     rules_store.append(p.slice)
+    #| BLOCK_OPENER ExplicitConstructorInvocation BLOCK_CLOSER
 
 def p_ExplicitConstructorInvocation(p):
     '''
@@ -643,6 +720,11 @@ def p_LocalVariableDeclaration(p):
     LocalVariableDeclaration : Type VariableDeclarators
     '''
     for symbol in p[2]:
+        if 'class_name' in symbol.keys():
+            if p[1]['place'] != symbol['class_name']:
+                raise Exception("Wrong class assignments")
+            ST.insert_in_sym_table(symbol['place'], symbol['class_name'])
+            continue
         i = symbol['place']
         if 'type' in symbol:
             t = symbol['type']
@@ -690,8 +772,8 @@ def p_LocalVariableDeclaration(p):
                 ST.insert_in_sym_table(idName=i, idType=p[1]['type'], is_array=True, arr_size=0)
     for symbol in p[2]:
         if "emit_intrs" in symbol.keys():
-            X = symbol["emit_intrs"][0]
-            TAC.emit(X[0], X[1], X[2], X[3], ST)
+            for X in symbol["emit_intrs"]:
+                TAC.emit(X[0], X[1], X[2], X[3], ST)
     rules_store.append(p.slice)
 
 def p_Statement(p):
@@ -840,6 +922,7 @@ def p_SwMark2(p):
 
 def p_SwMark3(p):
     ''' SwMark3 : '''
+    TAC.emit('goto', p[-2][0], '', '', ST)
     TAC.emit('label', p[-2][1], '', '', ST)
     for i in range(len(p[-1]['labels'])):
         label = p[-1]['labels'][i]
@@ -961,7 +1044,7 @@ def p_doWhMark1(p):
 def p_doWhMark3(p):
     '''doWhMark3 : '''
     TAC.emit('ifgoto',p[-2]['place'],'eq 0', p[-7][2], ST)
-    TAC.emit('goto',p[-7][1],'','', ST)
+    TAC.emit('goto',p[-7][0],'','', ST)
     TAC.emit('label',p[-7][2],'','', ST)
 
 def p_doWhMark2(p):
@@ -974,26 +1057,26 @@ def p_doWhMark2(p):
 
 def p_ForStatement(p):
     '''
-    ForStatement : FOR FoMark0 L_PAREN ForInit STMT_TERMINATOR FoMark1 Expression STMT_TERMINATOR ForUpdate R_PAREN FoMark2 Statement FoMark3
-    | FOR FoMark0 L_PAREN STMT_TERMINATOR FoMark1 Expression STMT_TERMINATOR ForUpdate R_PAREN FoMark2 Statement FoMark3
-    | FOR FoMark0 L_PAREN ForInit STMT_TERMINATOR FoMark1 STMT_TERMINATOR ForUpdate R_PAREN FoMark2 Statement FoMark3
+    ForStatement : FOR FoMark0 L_PAREN ForInit STMT_TERMINATOR FoMark1 Expression STMT_TERMINATOR FoMark6 ForUpdate R_PAREN FoMark2 Statement FoMark3
+    | FOR FoMark0 L_PAREN STMT_TERMINATOR FoMark1 Expression STMT_TERMINATOR FoMark6 ForUpdate R_PAREN FoMark2 Statement FoMark3
+    | FOR FoMark0 L_PAREN ForInit STMT_TERMINATOR FoMark1 STMT_TERMINATOR FoMark6 ForUpdate R_PAREN FoMark2 Statement FoMark3
     | FOR FoMark0 L_PAREN ForInit STMT_TERMINATOR FoMark1 Expression STMT_TERMINATOR R_PAREN FoMark4 Statement FoMark5
     | FOR FoMark0 L_PAREN ForInit STMT_TERMINATOR FoMark1 STMT_TERMINATOR R_PAREN FoMark4 Statement FoMark5
     | FOR FoMark0 L_PAREN STMT_TERMINATOR FoMark1 Expression STMT_TERMINATOR R_PAREN FoMark4 Statement FoMark5
-    | FOR FoMark0 L_PAREN STMT_TERMINATOR FoMark1 STMT_TERMINATOR ForUpdate R_PAREN FoMark2 Statement FoMark3
+    | FOR FoMark0 L_PAREN STMT_TERMINATOR FoMark1 STMT_TERMINATOR FoMark6 ForUpdate R_PAREN FoMark2 Statement FoMark3
     | FOR FoMark0 L_PAREN STMT_TERMINATOR FoMark1 STMT_TERMINATOR R_PAREN FoMark4 Statement FoMark5
     '''
     rules_store.append(p.slice)
 
 def p_ForStatementNoShortIf(p):
     '''
-    ForStatementNoShortIf : FOR FoMark0 L_PAREN ForInit STMT_TERMINATOR FoMark1 Expression STMT_TERMINATOR ForUpdate R_PAREN FoMark2 StatementNoShortIf FoMark3
-    | FOR FoMark0 L_PAREN STMT_TERMINATOR FoMark1 Expression STMT_TERMINATOR ForUpdate R_PAREN FoMark2 StatementNoShortIf FoMark3
-    | FOR FoMark0 L_PAREN ForInit STMT_TERMINATOR FoMark1 STMT_TERMINATOR ForUpdate R_PAREN FoMark2 StatementNoShortIf FoMark3
+    ForStatementNoShortIf : FOR FoMark0 L_PAREN ForInit STMT_TERMINATOR FoMark1 Expression STMT_TERMINATOR FoMark6 ForUpdate R_PAREN FoMark2 StatementNoShortIf FoMark3
+    | FOR FoMark0 L_PAREN STMT_TERMINATOR FoMark1 Expression STMT_TERMINATOR FoMark6 ForUpdate R_PAREN FoMark2 StatementNoShortIf FoMark3
+    | FOR FoMark0 L_PAREN ForInit STMT_TERMINATOR FoMark1 STMT_TERMINATOR FoMark6 ForUpdate R_PAREN FoMark2 StatementNoShortIf FoMark3
     | FOR FoMark0 L_PAREN ForInit STMT_TERMINATOR FoMark1 Expression STMT_TERMINATOR R_PAREN FoMark4 StatementNoShortIf FoMark5
     | FOR FoMark0 L_PAREN ForInit STMT_TERMINATOR FoMark1 STMT_TERMINATOR R_PAREN FoMark4 StatementNoShortIf FoMark5
     | FOR FoMark0 L_PAREN STMT_TERMINATOR FoMark1 Expression STMT_TERMINATOR R_PAREN FoMark4 StatementNoShortIf FoMark5
-    | FOR FoMark0 L_PAREN STMT_TERMINATOR FoMark1 STMT_TERMINATOR ForUpdate R_PAREN FoMark2 StatementNoShortIf FoMark3
+    | FOR FoMark0 L_PAREN STMT_TERMINATOR FoMark1 STMT_TERMINATOR FoMark6 ForUpdate R_PAREN FoMark2 StatementNoShortIf FoMark3
     | FOR FoMark0 L_PAREN STMT_TERMINATOR FoMark1 STMT_TERMINATOR R_PAREN FoMark4 StatementNoShortIf FoMark5
     '''
     rules_store.append(p.slice)
@@ -1008,16 +1091,24 @@ def p_FoMark1(p):
     l1 = ST.make_label()
     l2 = ST.make_label()
     l3 = ST.make_label()
+    l4 = ST.make_label()
     stackbegin.append(l1)
     stackend.append(l3)
     TAC.emit('label',l1,'','', ST)
-    p[0]=[l1,l2,l3]
+    p[0]=[l1,l2,l3, l4]
 
 def p_FoMark2(p):
     '''FoMark2 : '''
-    TAC.emit('ifgoto',p[-4]['place'],'eq 0', p[-5][2], ST)
-    TAC.emit('goto',p[-5][1],'','', ST)
-    TAC.emit('label',p[-5][1],'','', ST)
+    TAC.emit('goto', p[-6][0],'','', ST)
+    TAC.emit('label', p[-6][1],'','', ST)
+    TAC.emit('ifgoto',p[-5]['place'],'eq 0', p[-6][3], ST)
+    # TAC.emit('goto',p[-5][1],'','', ST)
+    # TAC.emit('label',p[-5][1],'','', ST)
+
+def p_FoMark6(p):
+    '''FoMark6 : '''
+    TAC.emit('goto', p[-3][1],'','', ST)
+    TAC.emit('label',p[-3][2],'','', ST)
 
 def p_FoMark4(p):
     '''FoMark4 : '''
@@ -1027,8 +1118,10 @@ def p_FoMark4(p):
 
 def p_FoMark3(p):
     '''FoMark3 : '''
-    TAC.emit('goto',p[-7][0],'','', ST)
-    TAC.emit('label',p[-7][2],'','', ST)
+    TAC.emit('goto', p[-8][2],'', '', ST)
+    TAC.emit('label', p[-8][3],'', '', ST)
+    # TAC.emit('goto',p[-7][0] + '--**--','','', ST)
+    # TAC.emit('label',p[-7][2],'','', ST)
     ST.end_scope(TAC)
     stackbegin.pop()
     stackend.pop()
@@ -1093,7 +1186,7 @@ def p_ReturnStatement(p):
         if curr_returned != None:
             if to_return[0] != curr_returned['type']:
                 raise Exception("Wrong return type in %s" %(ST.curr_scope))
-            if 'is_array' in curr_returned.keys() and len(curr_returned['arr_size']) != to_return[1]:
+            if 'is_array' in curr_returned.keys() and curr_returned['is_array'] and len(curr_returned['arr_size']) != to_return[1]:
                 raise Exception("Dimension mismatch in return statement in %s" %(ST.curr_scope))
         elif curr_returned == None:
             if p[2]['type'] != to_return[0] or to_return[1] != 0:
@@ -1164,6 +1257,9 @@ def p_ClassInstanceCreationExpression(p):
     ClassInstanceCreationExpression : NEW ClassType L_PAREN R_PAREN
     | NEW ClassType L_PAREN ArgumentList R_PAREN
     '''
+    attributes = class_table[p[2]['place']]
+    p[0] = attributes
+    #TAC.emit("declare","_"+"obj_","","",ST)
     rules_store.append(p.slice)
 
 def p_ArgumentList(p):
@@ -1227,6 +1323,27 @@ def p_FieldAccess(p):
     FieldAccess : Primary DOT Identifier
     | SUPER DOT Identifier
     '''
+    p[0] = {}
+    index = -1
+    for i, var in enumerate(g.members):
+        if var[0] == p[3]:
+            index = i
+            break
+    if index == -1:
+        raise Exception('Not in scope')
+    # TAC.emit('this[' + str(index) + ']', p[3], '', p[2], ST)
+
+    t1 = ST.get_temp_var()
+    t2 = ST.get_temp_var()
+    TAC.emit(t2, str(index), '', '=', ST)
+    src = 'this' + '[' + t2 + ']'
+    TAC.emit(t1, src, '', '=', ST)
+
+    p[0]['type'] = 'INT'
+    p[0]['place'] = t1
+    p[0]['access_type'] = 'array'
+    p[0]['name'] = 'this'
+    p[0]['index'] = t2
     rules_store.append(p.slice)
 
 def p_MethodInvocation(p):
@@ -1240,27 +1357,43 @@ def p_MethodInvocation(p):
     '''
     # Check return type of function in symbol table
     if p[2] == '(':
+        if p[1]['place'] not in g.func_members and 'this' not in p[1].keys() and p[1]['place'] != 'println' and p[1]['place'] != 'input':
+            raise Exception("Method not defined")
         attributes = ST.lookup(p[1]['place'], is_func=True)
-        if attributes == None and p[1]['place'] != "System.out.println":
+        if attributes == None and p[1]['place'] != "println" and p[1]['place'] != "input":
             raise Exception("Undeclared function used: %s" %(p[1]['place']))
 
-        if p[1]['place'] == 'System.out.println':
+        if p[1]['place'] == 'println':
             if len(p) == 5:
                 for parameter in p[3]:
-                    TAC.emit('print',parameter['place'],'','', ST)
+                    if 'type' in parameter.keys():
+                        TAC.emit('print',parameter['place'],'','_' + parameter['type'], ST)
+                    else:
+                        TAC.emit('print', parameter['place'], '', '_INT', ST)
+        elif p[1]['place'] == 'input':
+            if len(p) == 5:
+                for parameter in p[3]:
+                    if parameter['type'] != 'INT':
+                        raise Exception("Input only INT")
+                    TAC.emit('input',parameter['place'],'','', ST)
         else:
             temp_var = ST.get_temp_var()
             if len(p) == 5:
                 prototype = attributes['params']
                 if len(prototype) != len(p[3]):
                     raise Exception("Wrong number of arguments to function call: %s" %(p[1]['place']))
+                if 'this' in p[1].keys():
+                    TAC.emit('param', p[1]['this'], '', '', ST)
                 for i in range(len(p[3])):
                     parameter = p[3][i]
                     proto = prototype[i]
                     if parameter['type'] != proto['type']:
                         raise Exception("Wrong type of arg passed to function %s; got %s but expected %s" %(p[1]['place'], parameter['type'], proto['type']))
                     TAC.emit('param',parameter['place'],'','', ST)
-            TAC.emit('call',p[1]['place'],temp_var,'', ST)
+            else:
+                if 'this' in p[1].keys():
+                    TAC.emit('param', p[1]['this'], '', '', ST)
+            TAC.emit('call',p[1]['place'],temp_var,len(p[3]), ST)
             p[0] = {
                 'place' : temp_var,
                 'ret_type' : attributes['ret_type']
@@ -1310,6 +1443,9 @@ def p_PostfixExpression(p):
     | PostIncrementExpression
     | PostDecrementExpression
     '''
+    if 'fields' in p[1].keys():
+        p[0] = p[1]
+        return
     p[0] = {}
     if 'idVal' in p[1].keys():
         p[0]['place'] = p[1]['idVal']
@@ -1326,9 +1462,15 @@ def p_PostfixExpression(p):
 
     elif 'place' in p[1].keys():
         p[0] = p[1]
-        #TODO: Temporarily removing to run method invocation
-        # p[0]['type'] = p[1]['type']
-        # p[0]['place'] = p[1]['place']
+
+    elif 'name' in p[1].keys() and p[1]['name'].find('_obj_') != -1:
+        p[0]['type'] = p[1]['type']
+        p[0]['place'] = ST.get_temp_var()
+        p[0]['access_type'] = 'array'
+        p[0]['name'] = p[1]['name']
+        p[0]['index'] = p[1]['index']
+
+        TAC.emit(p[0]['place'], p[0]['name'] + '[' + p[0]['index'] + ']', '', '=', ST)
 
     elif 'is_array' in p[1].keys():
         p[0]['place'] = p[1]['arr_size']
@@ -1375,6 +1517,8 @@ def p_UnaryExpression(p):
     if len(p) == 2:
         p[0] = p[1]
         return
+    else:
+        pass
     rules_store.append(p.slice)
 
 # Checked
@@ -1447,25 +1591,36 @@ def p_MultiplicativeExpression(p):
     newPlace = ST.get_temp_var()
     p[0] = {
         'place' : newPlace,
-        'type' : 'TYPE_ERROR'
     }
-    #SANKET:- Same here with function declaration
-    if ('type' in p[1].keys() and p[1]['type'] == 'TYPE_ERROR') or ('type' in p[3].keys() and p[3]['type'] == 'TYPE_ERROR'):
-        return
+    # -----------------------------
+    if 'ret_type' in p[1].keys():
+        type1 = p[1]['ret_type'][0]
+        if p[1]['ret_type'][1] != 0:
+            raise Exception("Error")
+    else:
+        type1 = p[1]['type']
+
+    if 'ret_type' in p[3].keys():
+        type2 = p[3]['ret_type'][0]
+        if p[3]['ret_type'][1] != 0:
+            raise Exception("Error")
+    else:
+        type2 = p[3]['type']
+    # -----------------------------
     if p[2] == '*':
-        if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
+        if type1 == "INT" and type2 == "INT":
             TAC.emit(newPlace,p[1]['place'], p[3]['place'], p[2], ST)
             p[0]['type'] = 'INT'
         else:
             raise Exception('Error: Type is not compatible'+p[1]['place']+','+p[3]['place']+'.')
     elif p[2] == '/' :
-        if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
+        if type1 == "INT" and type2 == "INT":
             TAC.emit(newPlace, p[1]['place'], p[3]['place'], p[2], ST)
             p[0]['type'] = 'INT'
         else:
             raise Exception('Error: Type is not compatible' + p[1]['place'] + ',' + p[3]['place'] + '.')
     elif p[2] == '%':
-        if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
+        if type1 == "INT" and type2 == "INT":
             TAC.emit(newPlace,p[1]['place'],p[3]['place'],p[2], ST)
             p[0]['type'] = 'INT'
         else:
@@ -1485,14 +1640,34 @@ def p_AdditiveExpression(p):
     newPlace = ST.get_temp_var()
     p[0] = {
         'place' : newPlace,
-        'type' : 'TYPE_ERROR'
     }
-    if p[1]['type'] == 'TYPE_ERROR' or p[3]['type'] == 'TYPE_ERROR':
-        return
 
-    if p[1]['type'] == 'INT' and p[3]['type'] == 'INT':
+    if 'ret_type' in p[1].keys():
+        type1 = p[1]['ret_type'][0]
+        if p[1]['ret_type'][1] != 0:
+            raise Exception("Error")
+    else:
+        type1 = p[1]['type']
+
+    if 'ret_type' in p[3].keys():
+        type2 = p[3]['ret_type'][0]
+        if p[3]['ret_type'][1] != 0:
+            raise Exception("Error")
+    else:
+        type2 = p[3]['type']
+
+    if type1 == "INT" and type2 == "INT":
         TAC.emit(newPlace, p[1]['place'], p[3]['place'], p[2], ST)
         p[0]['type'] = 'INT'
+    elif type1 == "CHAR" and type2 == "INT":
+        TAC.emit(newPlace, p[1]['place'], p[3]['place'], p[2], ST)
+        p[0]['type'] = 'CHAR'
+    elif type1 == "INT" and type2 == "CHAR":
+        TAC.emit(newPlace, p[1]['place'], p[3]['place'], p[2], ST)
+        p[0]['type'] = 'CHAR'
+    elif type1 == "CHAR" and type2 == "CHAR":
+        TAC.emit(newPlace, p[1]['place'], p[3]['place'], p[2], ST)
+        p[0]['type'] = 'CHAR'
     else:
         raise Exception("Error: integer value is needed")
     rules_store.append(p.slice)
@@ -1511,12 +1686,22 @@ def p_ShiftExpression(p):
     newPlace = ST.get_temp_var()
     p[0] = {
         'place' : newPlace,
-        'type' : 'TYPE_ERROR'
     }
-    if p[1]['type'] == 'TYPE_ERROR' or p[3]['type'] == 'TYPE_ERROR':
-        return
+    if 'ret_type' in p[1].keys():
+        type1 = p[1]['ret_type'][0]
+        if p[1]['ret_type'][1] != 0:
+            raise Exception("Error")
+    else:
+        type1 = p[1]['type']
 
-    if p[1]['type'] == 'INT' and p[3]['type'] == 'INT':
+    if 'ret_type' in p[3].keys():
+        type2 = p[3]['ret_type'][0]
+        if p[3]['ret_type'][1] != 0:
+            raise Exception("Error")
+    else:
+        type2 = p[3]['type']
+
+    if type1 == "INT" and type2 == "INT":
         TAC.emit(newPlace, p[1]['place'], p[3]['place'], p[2], ST)
         p[0]['type'] = 'INT'
     else:
@@ -1543,12 +1728,23 @@ def p_RelationalExpression(p):
     newPlace = ST.get_temp_var()
     p[0] = {
         'place' : newPlace,
-        'type' : 'TYPE_ERROR'
     }
-    if p[1]['type']=='TYPE_ERROR' or p[3]['type']=='TYPE_ERROR':
-        return
 
-    if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
+    if 'ret_type' in p[1].keys():
+        type1 = p[1]['ret_type'][0]
+        if p[1]['ret_type'][1] != 0:
+            raise Exception("Error")
+    else:
+        type1 = p[1]['type']
+
+    if 'ret_type' in p[3].keys():
+        type2 = p[3]['ret_type'][0]
+        if p[3]['ret_type'][1] != 0:
+            raise Exception("Error")
+    else:
+        type2 = p[3]['type']
+
+    if type1 == "INT" and type2 == "INT":
         if p[2]=='>':
             TAC.emit('ifgoto', p[1]['place'], 'gt ' + p[3]['place'], l2, ST)
             TAC.emit('label', l1, '', '', ST)
@@ -1605,11 +1801,22 @@ def p_EqualityExpression(p):
     newPlace = ST.get_temp_var()
     p[0]={
         'place' : newPlace,
-        'type' : 'TYPE_ERROR'
     }
-    if p[1]['type']=='TYPE_ERROR' or p[3]['type']=='TYPE_ERROR':
-        return
-    if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
+    if 'ret_type' in p[1].keys():
+        type1 = p[1]['ret_type'][0]
+        if p[1]['ret_type'][1] != 0:
+            raise Exception("Error")
+    else:
+        type1 = p[1]['type']
+
+    if 'ret_type' in p[3].keys():
+        type2 = p[3]['ret_type'][0]
+        if p[3]['ret_type'][1] != 0:
+            raise Exception("Error")
+    else:
+        type2 = p[3]['type']
+
+    if type1 == "INT" and type2 == "INT":
         if(p[2][0]=='='):
             TAC.emit('ifgoto', p[1]['place'], 'eq ' + p[3]['place'], l2, ST)
             TAC.emit('label', l1, '', '', ST)
@@ -1643,11 +1850,22 @@ def p_AndExpression(p):
     newPlace = ST.get_temp_var()
     p[0] = {
         'place' : newPlace,
-        'type' : 'TYPE_ERROR'
     }
-    if p[1]['type']=='TYPE_ERROR' or p[3]['type']=='TYPE_ERROR':
-        return
-    if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
+    if 'ret_type' in p[1].keys():
+        type1 = p[1]['ret_type'][0]
+        if p[1]['ret_type'][1] != 0:
+            raise Exception("Error")
+    else:
+        type1 = p[1]['type']
+
+    if 'ret_type' in p[3].keys():
+        type2 = p[3]['ret_type'][0]
+        if p[3]['ret_type'][1] != 0:
+            raise Exception("Error")
+    else:
+        type2 = p[3]['type']
+
+    if type1 == "INT" and type2 == "INT":
         TAC.emit(newPlace,p[1]['place'],p[3]['place'],'&', ST)
         p[0]['type'] = 'INT'
     else:
@@ -1665,11 +1883,22 @@ def p_ExclusiveOrExpression(p):
     newPlace = ST.get_temp_var()
     p[0] = {
         'place' : newPlace,
-        'type' : 'TYPE_ERROR'
     }
-    if p[1]['type']=='TYPE_ERROR' or p[3]['type']=='TYPE_ERROR':
-        return
-    if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
+    if 'ret_type' in p[1].keys():
+        type1 = p[1]['ret_type'][0]
+        if p[1]['ret_type'][1] != 0:
+            raise Exception("Error")
+    else:
+        type1 = p[1]['type']
+
+    if 'ret_type' in p[3].keys():
+        type2 = p[3]['ret_type'][0]
+        if p[3]['ret_type'][1] != 0:
+            raise Exception("Error")
+    else:
+        type2 = p[3]['type']
+
+    if type1 == "INT" and type2 == "INT":
         TAC.emit(newPlace,p[1]['place'],p[3]['place'],'^', ST)
         p[0]['type'] = 'INT'
     else:
@@ -1687,11 +1916,22 @@ def p_InclusiveOrExpression(p):
     newPlace = ST.get_temp_var()
     p[0] = {
         'place' : newPlace,
-        'type' : 'TYPE_ERROR'
     }
-    if p[1]['type']=='TYPE_ERROR' or p[3]['type']=='TYPE_ERROR':
-        return
-    if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
+    if 'ret_type' in p[1].keys():
+        type1 = p[1]['ret_type'][0]
+        if p[1]['ret_type'][1] != 0:
+            raise Exception("Error")
+    else:
+        type1 = p[1]['type']
+
+    if 'ret_type' in p[3].keys():
+        type2 = p[3]['ret_type'][0]
+        if p[3]['ret_type'][1] != 0:
+            raise Exception("Error")
+    else:
+        type2 = p[3]['type']
+
+    if type1 == "INT" and type2 == "INT":
         TAC.emit(newPlace, p[1]['place'], p[3]['place'], '|', ST)
         p[0]['type'] = 'INT'
     else:
@@ -1709,12 +1949,22 @@ def p_ConditionalAndExpression(p):
     newPlace = ST.get_temp_var()
     p[0] = {
         'place' : newPlace,
-        'type' : 'TYPE_ERROR'
     }
-    if p[1]['type']=='TYPE_ERROR' or p[3]['type']=='TYPE_ERROR':
-        p[0]=p[1]
-        return
-    if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
+    if 'ret_type' in p[1].keys():
+        type1 = p[1]['ret_type'][0]
+        if p[1]['ret_type'][1] != 0:
+            raise Exception("Error")
+    else:
+        type1 = p[1]['type']
+
+    if 'ret_type' in p[3].keys():
+        type2 = p[3]['ret_type'][0]
+        if p[3]['ret_type'][1] != 0:
+            raise Exception("Error")
+    else:
+        type2 = p[3]['type']
+
+    if type1 == "INT" and type2 == "INT":
         l1 = ST.make_label()
         TAC.emit(newPlace,p[1]['place'],'','=', ST)
         TAC.emit('ifgoto',p[1]['place'],'eq 0',l1, ST)
@@ -1736,11 +1986,22 @@ def p_ConditionalOrExpression(p):
     newPlace = ST.get_temp_var()
     p[0] = {
         'place' : newPlace,
-        'type' : 'TYPE_ERROR'
     }
-    if p[1]['type']=='TYPE_ERROR' or p[3]['type']=='TYPE_ERROR':
-        return
-    if p[1]['type'] == 'INT' and p[3]['type'] == 'INT' :
+    if 'ret_type' in p[1].keys():
+        type1 = p[1]['ret_type'][0]
+        if p[1]['ret_type'][1] != 0:
+            raise Exception("Error")
+    else:
+        type1 = p[1]['type']
+
+    if 'ret_type' in p[3].keys():
+        type2 = p[3]['ret_type'][0]
+        if p[3]['ret_type'][1] != 0:
+            raise Exception("Error")
+    else:
+        type2 = p[3]['type']
+
+    if type1 == "INT" and type2 == "INT":
         l1 = ST.make_label()
         TAC.emit(newPlace,p[1]['place'],'','=', ST)
         TAC.emit('ifgoto',p[1]['place'],'eq 1',l1, ST)
@@ -1788,7 +2049,7 @@ def p_Assignment(p):
             raise Exception("Type Mismatch for symbol: %s" %(p[3]['place']))
     else:
         dest = p[1]['name'] + '[' + p[1]['index'] + ']'
-        TAC.emit(dest, p[3]['place'], '', '=', ST)
+        TAC.emit(dest, p[3]['place'], '', p[2], ST)
 
 
     rules_store.append(p.slice)
@@ -1841,6 +2102,7 @@ def p_ConstantExpression(p):
 
 def p_error(p):
     print("Syntax Error in line %d" %(p.lineno))
+    sys.exit()
 
 
 def parser_main():
@@ -1860,8 +2122,9 @@ def parser_main():
     # print("******************")
     # for i in TAC.code_list:
         # print(i)
-    #TAC.generate()
+    TAC.generate()
     # ST.print_scope_table()
 
 if __name__ == "__main__":
     parser_main()
+    # print(class_table)

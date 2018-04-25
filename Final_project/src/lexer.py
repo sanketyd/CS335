@@ -155,7 +155,7 @@ def t_FLOAT_CONSTANT(t):
     return t
 
 def t_INT_CONSTANT(t):
-    r'\d+'
+    r'\-?\d+'
     t.value = int(t.value)
     return t
 

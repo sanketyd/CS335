@@ -47,6 +47,10 @@ def is_valid_number(symbol):
 def is_valid_sym(symbol):
     if type(symbol) != type(''):
         return False
+    elif symbol != None and symbol[0] == "'" and symbol[-1] == "'" and len(symbol) > 2:
+        return False
+    elif symbol != None and symbol[0] == "`" and symbol[-1] == "`" and len(symbol) > 3:
+        return False
     elif symbol != None and not is_valid_number(symbol):
         return True
     return False
@@ -90,7 +94,7 @@ class Instruction:
             for symbol in symbols:
                 if is_valid_sym(symbol):
                     if is_temp_var(symbol):
-                        g.temp_var_count += 1
+                        g.temp_var_set.add(symbol)
                     global func_symbol_table
                     if symbol not in func_symbol_table.keys():
                         func_symbol_table[symbol] = SymbolTableEntry()
@@ -101,10 +105,9 @@ class Instruction:
             # store 'symbols[0]` in symbol table if not already present
             # set size  of array to `symbols[1]`
             if is_valid_sym(symbols[0]):
-                if symbols[0] not in g.symbol_table.keys():
-                    g.symbol_table[symbols[0]] = SymbolTableEntry()
-                    g.symbol_table[symbols[0]].address_descriptor_mem.add(symbols[0])
-                    g.symbol_table[symbols[0]].array_size = symbols[1]
+                if symbols[0] not in func_symbol_table.keys():
+                    func_symbol_table[symbols[0]] = SymbolTableEntry()
+                    func_symbol_table[symbols[0]].array_size = symbols[1]
 
 
     def handle_array_notation(self, symbol):
@@ -152,10 +155,17 @@ class Instruction:
             else:
                 self.jmp_to_label = jmp_location
 
-        elif instr_type == "print":
+        elif instr_type == "print_INT":
             # 10, print, variable
             self.instr_type = "print_int"
             self.inp1, self.array_index_i1 = self.handle_array_notation(statement[-1].strip())
+            self.add_to_symbol_table([self.inp1, self.array_index_i1])
+
+        elif instr_type == "print_CHAR":
+            self.instr_type = "print_char"
+            self.inp1, self.array_index_i1 = self.handle_array_notation(statement[-1].strip())
+            if self.inp1[0] == "'" and self.inp1[-1] == "'" and self.inp1[1] == "\\":
+                self.inp1 = "`" + self.inp1[1] + self.inp1[2] + "`"
             self.add_to_symbol_table([self.inp1, self.array_index_i1])
 
         elif instr_type == "input":
@@ -189,7 +199,7 @@ class Instruction:
                 self.jmp_to_label = statement[2].strip()
                 self.out = statement[3].strip()
                 self.inp1 = statement[-1].strip()
-                self.add_to_symbol_table(self.out)
+                self.add_to_symbol_table([self.out])
 
         elif instr_type == "label":
             # 10, label, label_name
@@ -207,6 +217,7 @@ class Instruction:
         elif instr_type == "arg":
             self.instr_type = "arg"
             self.inp1 = statement[-1].strip()
+            self.add_to_symbol_table([self.inp1])
 
         elif instr_type == "end":
             self.instr_type = "end_scope"

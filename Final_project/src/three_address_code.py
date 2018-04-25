@@ -47,6 +47,9 @@ class TAC:
         elif dest == 'print':
             src1 = self.get_name(src1, ST)
             self.code_list.append([dest, src1, src2, op])
+        elif dest == 'input':
+            src1 = self.get_name(src1, ST)
+            self.code_list.append([dest, src1, src2, op])
         elif dest == 'scope':
             if src1 == 'begin':
                 # ST.curr_scope = str(src2)
@@ -58,6 +61,11 @@ class TAC:
             self.code_list.append([dest, self.get_name(src1,ST), src2, op])
         elif dest == 'declare':
             self.code_list.append([dest, self.get_name(src1,ST), self.get_name(src2,ST), op])
+        elif dest == 'ret':
+            if src1 != '':
+                self.code_list.append([dest, self.get_name(src1, ST), src2, op])
+            else:
+                self.code_list.append([dest, src1, src2, op])
         else:
             self.code_list.append([dest, src1, src2, op])
 
@@ -69,7 +77,10 @@ class TAC:
                 arr_symbol = symbol[:arr_start]
                 index_symbol = symbol[arr_start + 1:-1]
                 scope_1 = ST.tac_lookup(arr_symbol)
-                to_return += arr_symbol + "_" + scope_1 + "["
+                if scope_1 != None:
+                    to_return += arr_symbol + "_" + scope_1 + "["
+                else:
+                    to_return += arr_symbol + '['
                 if is_valid_sym(index_symbol):
                     scope_2 = ST.tac_lookup(index_symbol)
                     to_return += index_symbol + "_" + scope_2 + "]"
@@ -78,6 +89,8 @@ class TAC:
                 return to_return
             else:
                 scope = ST.tac_lookup(symbol)
+                if scope == None:
+                    return str(symbol)
                 return str(symbol) + "_" + str(scope)
         else:
             return symbol
@@ -97,7 +110,7 @@ class TAC:
             elif op == '=':
                 print(str(line_no) + ",=," + str(dest) + "," + str(src1))
             elif dest == 'declare':
-                print(str(line_no) + ",decl_array," + str(src1) + "," + str(src2))
+                print(str(line_no) + ",decl_array," + str(src1) + "[" + str(src2) + "]")
             elif op in ['&&', '||', 'xor']:
                 print(str(line_no) + "," + str(op) +"," + str(dest) + "," + str(src1) + "," + str(src2))
             elif dest == 'goto':
@@ -121,7 +134,9 @@ class TAC:
             elif dest == 'param':
                 print(str(line_no) + ",param," + str(src1))
             elif dest == 'print':
-                print(str(line_no) + ",print," + str(src1))
+                print(str(line_no) + ",print" +str(op)+ "," + str(src1))
+            elif dest == 'input':
+                print(str(line_no) + ",input," + str(src1))
             elif dest == 'scope':
                 if src1 == 'begin':
                     print(str(line_no) + ",begin," + str(src2))
